@@ -7,6 +7,10 @@ namespace API.Data
     public class Users : IdentityUser
     {
         public int BranchId { get; set; }
+        public bool AllowResetPassword  { get; set; }
+        public bool Active { get; set; }
+        public DateTime Created_At { get; set; }
+        public Guid Created_By { get; set; }
     }
     public class Roles : IdentityRole
     {
@@ -16,26 +20,28 @@ namespace API.Data
     {
         public string? Id { get; set; } = string.Empty;
 
-        [Required]
+        
         public string UserName { get; set; } = string.Empty;
-        [Required]
+       
         public int BranchId { get; set; }
 
-        [Required]
+       
         [EmailAddress]
         [DataType(DataType.EmailAddress)]
         public string Email { get; set; } = string.Empty;
-        [Required]
+      
         [Column("Name")]
-        public string RoleName { get; set; } = string.Empty; //role name
-        [Required]
+        public string RoleName { get; set; } = string.Empty; 
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
-        [Required]
         [DataType(DataType.Password)]
         [Compare(nameof(Password))]
         public string ConfirmPassword { get; set; } = string.Empty;
+        public bool AllowResetPassword { get; set; }
+        public bool Active { get; set; }
+        public DateTime Created_At { get; set; }
+        public Guid Created_By { get; set; }
 
     }
     public class RoleDTO
@@ -53,5 +59,6 @@ namespace API.Data
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
     }
+   
     public record UserSession(string? Id, string? UserName, string? Role);
 }
