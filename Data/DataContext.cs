@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using API.Data.View;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 
@@ -21,8 +22,18 @@ namespace API.Data
         //Staff
         public DbSet<Staffs> tblO_Staff { get; set; }
 
+        //Miller
+        public DbSet<Millers> tblO_Miller {  get; set; }
+
+        //Miller
+        public DbSet<Agents> tblO_Agent { get; set; }
+
         //User
         public DbSet<Users> AspNetUsers { get; set; }
+
+        //View
+        
+        public DbSet<Address> ViewO_Address { get; set; }
         public DataContext(DbContextOptions<DataContext> options)
             : base(options)
         {

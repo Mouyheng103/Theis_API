@@ -61,7 +61,7 @@ namespace API.Controllers.Core
                 findProvince.ProvinceName = province.ProvinceName;
                 findProvince.Active = province.Active;
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = "Update Success!" });
+                return Ok(new { Message = "Update Success!",data=findProvince });
             } 
             catch (DbUpdateConcurrencyException ex)
             {
@@ -155,7 +155,7 @@ namespace API.Controllers.Core
                 // Save changes to the database
                 _dataContext.SaveChanges();
 
-                return Ok("Name updated successfully!");
+                return Ok(new { Message = "Name updated successfully!",data=record });
             }
             catch (SqlException ex)
             {

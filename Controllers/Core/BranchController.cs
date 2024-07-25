@@ -89,7 +89,7 @@ namespace API.Controllers.Core
                 };
                 var addBranch = _dataContext.Add(newBranch);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Branch {branchDTO.Name} add successfully !" });
+                return Ok(new { Message = $"Branch {branchDTO.Name} add successfully !", data=newBranch });
             }
             catch (SqlException ex)
             {
@@ -106,7 +106,8 @@ namespace API.Controllers.Core
             if (branchDTO == null) { return BadRequest("Model is Empty"); }
             var findBranchById = await _dataContext.tblO_Branch.FindAsync(id);
             if (findBranchById == null) { return NotFound(new { Message = $"Branch Not Found !" }); }
-            if(findBranchById.Name==branchDTO.Name) { return Ok(new { Message = "Name already Exsist !" }); }
+            var finddup=_dataContext.tblO_Branch.Where(b=>b.Name == branchDTO.Name && b.Id!=id).FirstOrDefault();
+            if (finddup != null) { return BadRequest(new { Message = "Branch Already Exsist !!" }); }
             try
             {
 
@@ -122,7 +123,7 @@ namespace API.Controllers.Core
                 findBranchById.created_by = branchDTO.created_by;//will config
                 
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Branch {branchDTO.Name} updated successfully !" });
+                return Ok(new { Message = $"Branch {branchDTO.Name} updated successfully !",data= findBranchById });
             }
             catch (DbUpdateConcurrencyException ex)
             {

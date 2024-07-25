@@ -43,7 +43,7 @@ public class StaffController : ControllerBase
         try
         {
             var staff = await _dataContext.tblO_Staff.AsNoTracking()
-                .Where(s => s.StaffCode ==staffCode)
+                .Where(s => s.StaffId ==staffCode)
                 .ToListAsync();
             return staff.Any() ? Ok(staff) : NotFound(new { Message = $"No staff found with the code '{staffCode}'." });
         }
@@ -62,11 +62,12 @@ public class StaffController : ControllerBase
         int getlastid;
         try
         {
-            getlastid = _dataContext.tblO_Staff.OrderByDescending(e => e.StaffCode).FirstOrDefault()?.StaffCode ?? 0;
+            getlastid = _dataContext.tblO_Staff.OrderByDescending(e => e.StaffId).FirstOrDefault()?.StaffId ?? 0;
+            var branch=_dataContext.tblO_Branch.Find(staffDTO.BranchId);
+            var address=_dataContext.ViewO_Address.Find(staffDTO.VillageCode);
             var newStaff = new Staffs
             {
-                AutoId=Guid.NewGuid(),
-                StaffCode = getlastid+1,
+                StaffId = getlastid+1,
                 BranchId = staffDTO.BranchId,
                 Kh_Name = staffDTO.Kh_Name,
                 En_Name = staffDTO.En_Name,
@@ -84,10 +85,9 @@ public class StaffController : ControllerBase
                 Updated_By = staffDTO.Created_By,
                 Updated_At = DateTime.Now
             };
-
             await _dataContext.tblO_Staff.AddAsync(newStaff);
             await _dataContext.SaveChangesAsync();
-            return Ok(new { Message = "Staff Added successfully!" });
+            return Ok(new { Message = "Staff Added successfully!",data=newStaff,branchData=branch,address=address });
         }
         catch (Exception ex)
         {
@@ -103,7 +103,8 @@ public class StaffController : ControllerBase
 
         var existingStaff = await _dataContext.tblO_Staff.FindAsync(id);
         if (existingStaff == null) return NotFound(new { Message = "Staff not found!" });
-
+        var branch = _dataContext.tblO_Branch.Find(staffDTO.BranchId);
+        var address = _dataContext.ViewO_Address.Find(staffDTO.VillageCode);
         try
         {
             existingStaff.BranchId = staffDTO.BranchId;
@@ -122,7 +123,7 @@ public class StaffController : ControllerBase
             existingStaff.Updated_At = DateTime.Now;
 
             await _dataContext.SaveChangesAsync();
-            return Ok(new { Message = $"Staff updated successfully!" });
+            return Ok(new { Message = $"Staff updated successfully!",data= existingStaff,branchData = branch, address = address });
         }
         catch (Exception ex)
         {

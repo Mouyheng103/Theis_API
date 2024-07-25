@@ -97,7 +97,7 @@ namespace API.Controllers.Core
                 };
                 var addPosition = _dataContext.Add(newPosition);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Position added successfully!" });
+                return Ok(new { Message = $"Position added successfully!", data = newPosition });
             }
             catch (SqlException ex)
             {
@@ -136,7 +136,7 @@ namespace API.Controllers.Core
                 findPositionById.Updated_At = DateTime.Now;
 
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Position updated successfully!" });
+                return Ok(new { Message = $"Position updated successfully!",data=findPositionById });
             }
             catch (DbUpdateConcurrencyException ex)
             {

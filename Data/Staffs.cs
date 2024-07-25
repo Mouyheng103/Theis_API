@@ -3,10 +3,8 @@ using System.ComponentModel.DataAnnotations;
 
 public class Staffs
 {
-    [Key]
-    public Guid AutoId { get; set; }
-    [Required]
-    public int StaffCode { get; set; }
+    [Key,Required]
+    public int StaffId { get; set; }
     [Required]
     public int BranchId { get; set; }
     [Required]

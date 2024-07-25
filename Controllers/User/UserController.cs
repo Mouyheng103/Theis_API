@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using static API.Data.serviceResponses;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace API.Controllers.User
 {
@@ -67,25 +68,25 @@ namespace API.Controllers.User
             }
         }
         [HttpPost("register")]
-        public async Task<GeneralResponse> CreateAccount(UserDTO userDTO)
+        public async Task<IActionResult> CreateAccount(UserDTO userDTO)
         {
             try
             {
-                if (userDTO is null) return new GeneralResponse(false, "Model is empty");
-                var newUser = new Data.Users()
-                {
-                    UserName = userDTO.UserName,
-                    Email = userDTO.Email,
-                    PasswordHash = userDTO.Password,
-                    BranchId = userDTO.BranchId,
-                    AllowResetPassword=false,
-                    Active=true,
-                    Created_At = DateTime.UtcNow,
-                    Created_By=userDTO.Created_By
+                if (userDTO is null) return BadRequest(new { Message = "Model is empty" });
+                    var newUser = new Data.Users()
+                    {
+                        UserName = userDTO.UserName,
+                        Email = userDTO.Email,
+                        PasswordHash = userDTO.Password,
+                        BranchId = userDTO.BranchId,
+                        AllowResetPassword=false,
+                        Active=true,
+                        Created_At = DateTime.UtcNow,
+                        Created_By=userDTO.Created_By
                     
-                };
+                    };
                 var user = await _userManager.FindByNameAsync(newUser.UserName);
-                if (user is not null) return new GeneralResponse(false, "User registered already");
+                if (user is not null) return BadRequest(new { Message = "User registered already" });
                 try
                 {
                     var role = await _roleManager.FindByNameAsync(userDTO.RoleName);
@@ -96,86 +97,113 @@ namespace API.Controllers.User
                         if (!createUser.Succeeded)
                         {
                             var errors = string.Join(", ", createUser.Errors.Select(e => e.Description));
-                            return new GeneralResponse(false, $"Error occurred: {errors}");
+                            return BadRequest(new { Message = $"Error occurred: {errors}" });
                         }
-                        return new GeneralResponse(true, "Account Created");
+                        var branch= _dataContext.tblO_Branch.Where(b =>b.Id==newUser.BranchId).ToList();
+                        var createdUserData = new
+                        {
+                            newUser.Id,
+                            newUser.UserName,
+                            newUser.Email,
+                            branch, 
+                            newUser.Active,
+                            newUser.Created_At,
+                            newUser.Created_By,
+                            Role = userDTO.RoleName
+                        };
+                        return Ok(new { Message = "Account Created", Data = createdUserData });
                     }
-                    else { return new GeneralResponse(false, "Please Select Role!"); }
+                    else { return BadRequest(new { Message = "Please Select Role!" }); }
                 }
                 catch (Exception ex)
                 {
                     if (ex.InnerException != null)
                     {
-                        return new GeneralResponse(false, $"Error occurred: {ex.InnerException.Message}");
+                        return BadRequest(new { Message = $"Error occurred: {ex.InnerException.Message}" });
                     }
                     // Log the exception message
-                    return new GeneralResponse(false, $"Error occurred: {ex.Message}");
-
+                    return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
                 }
             }
             catch (SqlException ex)
             {
-                return new GeneralResponse(false, $"Error occurred: {ex.Message}");
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
             catch (Exception ex)
             {
-                return new GeneralResponse(false, $"Error occurred: {ex.Message}");
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
         }
         [HttpPut("update")]
-        public async Task<GeneralResponse> UpdateUser(UserDTO userDTO)
+        public async Task<IActionResult> UpdateUser(UserDTO userDTO)
         {
             try
             {
-                if (userDTO is null) return new GeneralResponse(false, "Model is Empty !");
-                var user = await _userManager.FindByIdAsync(userDTO.Id);  
+                if (userDTO is null) return BadRequest(new { Message = "Model is Empty !" });
 
-                if (user is null) return new GeneralResponse(false, "Invalid User!");
-                var CheckDupUsername = await _userManager.FindByNameAsync(userDTO.UserName);
-                if(CheckDupUsername.Id != userDTO.Id)
+                var user = await _userManager.FindByIdAsync(userDTO.Id);
+                if (user is null) return BadRequest(new { Message = "Invalid User!" });
+
+                var checkDupUsername = await _userManager.FindByNameAsync(userDTO.UserName);
+                if (checkDupUsername is not null && checkDupUsername.Id != userDTO.Id)
                 {
-                    if (CheckDupUsername is not null) return new GeneralResponse(false, "Username already taken!");
+                    return BadRequest(new { Message = "Username already taken!" });
                 }
+
                 user.UserName = userDTO.UserName;
                 user.Email = userDTO.Email;
                 user.BranchId = userDTO.BranchId;
                 user.AllowResetPassword = userDTO.AllowResetPassword;
                 user.Active = userDTO.Active;
-                if (userDTO.RoleName != null) {
+
+                if (userDTO.RoleName != null)
+                {
                     var currentRoles = await _userManager.GetRolesAsync(user);
                     var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
                     if (!removeResult.Succeeded)
                     {
                         var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
-                        return new GeneralResponse(false, $"Error occurred: {errors}");
+                        return BadRequest(new { Message = $"Error occurred: {errors}" });
                     }
 
-                    // Add new role
                     var addResult = await _userManager.AddToRoleAsync(user, userDTO.RoleName);
                     if (!addResult.Succeeded)
                     {
-                        return new GeneralResponse(false, "Failed to add new user role !");
+                        return BadRequest(new { Message = "Failed to add new user role !" });
                     }
-
                 }
+
                 var update = await _userManager.UpdateAsync(user);
                 if (!update.Succeeded)
                 {
                     var errors = string.Join(", ", update.Errors.Select(e => e.Description));
-                    return new GeneralResponse(false, $"Error occurred: {errors}");
+                    return BadRequest(new { Message = $"Error occurred: {errors}" });
                 }
-                return new GeneralResponse(true, "Account Updated");
+                var branch = _dataContext.tblO_Branch.Where(b => b.Id == user.BranchId).ToList();
+
+                var updatedUserData = new
+                {
+                    user.Id,
+                    user.UserName,
+                    user.Email,
+                    branch,
+                    user.AllowResetPassword,
+                    user.Active,
+                    Role = userDTO.RoleName
+                };
+
+                return Ok(new { Message = "Account Updated", Data = updatedUserData });
             }
             catch (SqlException ex)
             {
-                return new GeneralResponse(false, $"Error occurred: {ex.Message}");
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
             catch (Exception ex)
             {
-                return new GeneralResponse(false, $"Error occurred: {ex.Message}");
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
-           
         }
+
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> LoginAccount(LoginDTO loginDTO)
         {
@@ -224,7 +252,7 @@ namespace API.Controllers.User
             return BadRequest(new { Message = "Error resetting password.", Errors = addPasswordResult.Errors });
         }
         [HttpDelete("delete/{id}")]
-        public async Task<IActionResult> DeleteRole(string id)
+        public async Task<IActionResult> DeleteUser(string id)
         {
             var findrole = await _userManager.FindByIdAsync(id);
             if (findrole is null) return NotFound(new { error = "User not found" });
