@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace API.Controllers
 {
-    [Route("api/")]
+    [Route("api/miller/")]
     [ApiController]
     public class MillerController : ControllerBase
     {
@@ -24,14 +26,14 @@ namespace API.Controllers
             return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
         }
 
-        [HttpGet("getmiller")]
+        [HttpGet("get")]
         public IActionResult GetMillers()
         {
             try
             {
                 var millers = _dataContext.tblO_Miller.AsNoTracking().ToList();
-                if (millers is null) { return NotFound("No millers found!"); }
-                return Ok(millers);
+                return millers.Any() ? Ok(new { Message = "success!", Data = millers }) : NotFound(new { Message = "No millers found." });
+
             }
             catch (Exception ex)
             {
@@ -39,15 +41,38 @@ namespace API.Controllers
             }
         }
 
-        [HttpGet("findmiller/{millerId}")]
-        public async Task<IActionResult> FindMiller(int millerId)
+        [HttpGet("find")]
+        public IActionResult FindMiller(int? Id, string? Name)
         {
             try
             {
-                var miller = await _dataContext.tblO_Miller.AsNoTracking()
-                    .Where(m => m.AutoId == millerId)
-                    .ToListAsync();
-                return miller.Any() ? Ok(miller) : NotFound(new { Message = "No miller founded." });
+                if (!string.IsNullOrEmpty(Name)) {
+                    var dataByName = (from miller in _dataContext.tblO_Miller.Where(m=>m.Name==Name).AsNoTracking()
+                                        join address in _dataContext.ViewO_Address.AsNoTracking()
+                                        on miller.VillageCode equals address.VillageCode
+                                        select new
+                                        {
+                                            Miller = miller,
+                                            Address = "ភូមិ" + address.VillageName + " ឃុំ" + address.CommuneName + " ឃុំ" + address.DistrictName + " ឃុំ" + address.ProvinceName
+                                        }).ToList();
+                    return dataByName.Any() ? Ok(new { Message = "success!", Data = dataByName }) : NotFound(new { Message = "No millers found." });
+                }
+                else if(Id !=0 || Id != null)
+                {
+                    var dataById = (from miller in _dataContext.tblO_Miller.Where(m => m.Id == Id).AsNoTracking()
+                                      join address in _dataContext.ViewO_Address.AsNoTracking()
+                                      on miller.VillageCode equals address.VillageCode
+                                      select new
+                                      {
+                                          Miller = miller,
+                                          Address = "ភូមិ" + address.VillageName + " ឃុំ" + address.CommuneName + " ឃុំ" + address.DistrictName + " ឃុំ" + address.ProvinceName
+                                      }).ToList();
+                    return dataById.Any() ? Ok(new { Message = "success!", Data = dataById }) : NotFound(new { Message = "No millers found." });
+                }
+                else
+                {
+                    return BadRequest(new { Message = "Please provide Id or Province or Name" });
+                }
             }
             catch (Exception ex)
             {
@@ -55,7 +80,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpPost("miller/add")]
+        [HttpPost("add")]
         public async Task<IActionResult> AddMiller(Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -63,11 +88,11 @@ namespace API.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                getlastid = _dataContext.tblO_Miller.OrderByDescending(e => e.AutoId).FirstOrDefault()?.AutoId ?? 0;
+                getlastid = _dataContext.tblO_Miller.OrderByDescending(e => e.Id).FirstOrDefault()?.Id ?? 0;
 
                 var newMiller = new Millers
                 {
-                    AutoId = getlastid + 1,
+                    Id = getlastid + 1,
                     Name = millerDTO.Name,
                     Description = millerDTO.Description,
                     Tel_1 = millerDTO.Tel_1,
@@ -80,11 +105,14 @@ namespace API.Controllers
                     Updated_By = millerDTO.Created_By,
                     Updated_At = DateTime.Now
                 };
-                var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
 
                 await _dataContext.tblO_Miller.AddAsync(newMiller);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = "Miller added successfully!",data=newMiller, address = address });
+
+                var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
+                var data=new {newMiller, address};
+
+                return Ok(new { Message = "Miller added successfully!",data=data });
             }
             catch (Exception ex)
             {
@@ -92,30 +120,30 @@ namespace API.Controllers
             }
         }
 
-        [HttpPut("miller/update/{id}")]
+        [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateMiller(int id, Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest("Model is empty");
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var existingMiller = await _dataContext.tblO_Miller.FindAsync(id);
-            var address= await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
             if (existingMiller == null) return NotFound(new { Message = "Miller not found!" });
-
             try
             {
                 existingMiller.Name = millerDTO.Name;
                 existingMiller.Description = millerDTO.Description;
                 existingMiller.Tel_1 = millerDTO.Tel_1;
                 existingMiller.Tel_2 = millerDTO.Tel_2;
-                existingMiller.Tel_3 = millerDTO.Tel_3;
+                existingMiller.Tel_3 = millerDTO.Tel_3; 
                 existingMiller.VillageCode = millerDTO.VillageCode;
                 existingMiller.Active = millerDTO.Active;
                 existingMiller.Updated_By = millerDTO.Updated_By;
                 existingMiller.Updated_At = DateTime.Now;
-
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = "Miller updated successfully!",data=existingMiller, address=address });
+
+                var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
+                var data = new { existingMiller, address };
+                return Ok(new { Message = "Miller updated successfully!",data=data });
             }
             catch (Exception ex)
             {

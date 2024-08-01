@@ -29,8 +29,7 @@ namespace API.Controllers.Customer
             try
             {
                 var customers = _dataContext.ViewO_Customers.AsNoTracking().ToList();
-                if (customers is null) { return NotFound("No customers found!"); }
-                return Ok(new { Message = "Success!",Data=customers });
+                return customers.Any() ? Ok(new { Message = "success!", Data = customers }) : NotFound(new { Message = "No customers found." });
             }
             catch (Exception ex)
             {
@@ -47,14 +46,11 @@ namespace API.Controllers.Customer
                 {
                     var dataById =  _dataContext.ViewO_Customers.Where(a => a.Id == Id).AsNoTracking().ToList();
                     return dataById.Any() ? Ok(new { Message = "success!", Data = dataById }) : NotFound(new { Message = "No customer found." });
-
                 }
                 else if (!string.IsNullOrEmpty(VillageCode))
                 {
                     var dataByVillageCode = _dataContext.ViewO_Customers.Where(a => a.VillageCode == VillageCode).AsNoTracking().ToList();
                     return dataByVillageCode.Any() ? Ok(new { Message = "success!", Data = dataByVillageCode }) : NotFound(new { Message = "No customer found." });
-
-
                 }
                 else if (!string.IsNullOrEmpty(AgentId))
                 {
@@ -92,7 +88,7 @@ namespace API.Controllers.Customer
                     FirstNameM = customerDTO.FirstNameM,
                     LastNameM = customerDTO.LastNameM,
                     FirstName = customerDTO.FirstName,
-                    LastName = customerDTO.LastName,
+                    LastName = customerDTO.LastName,  
                     Tel = customerDTO.Tel,
                     VillageCode = customerDTO.VillageCode,
                     DOB = customerDTO.DOB,
@@ -118,7 +114,7 @@ namespace API.Controllers.Customer
         }
 
         [HttpPut("update/{id}")]
-        public async Task<IActionResult> UpdateCustomer(int id, Customers customerDTO)
+        public async Task<IActionResult> UpdateCustomer(string id, Customers customerDTO)
         {
             if (customerDTO == null) return BadRequest("Model is empty");
             if (!ModelState.IsValid) return BadRequest(ModelState);

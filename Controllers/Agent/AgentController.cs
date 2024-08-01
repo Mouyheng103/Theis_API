@@ -29,8 +29,8 @@ namespace API.Controllers.Agent
             try
             {
                 var data = _dataContext.ViewO_Agents.AsNoTracking().ToList();
-                if (data == null) return BadRequest(new { Message = "No Data" });
-                return Ok(new { Message = "success!", Data = data });
+                return data.Any() ? Ok(new { Message = "success!", Data = data }) : NotFound(new { Message = "No agents found." });
+
             }
             catch (Exception ex)
             {
@@ -45,26 +45,21 @@ namespace API.Controllers.Agent
                 if (!string.IsNullOrEmpty(Id))
                 {
                     var dataById = _dataContext.ViewO_Agents.Where(a => a.Id == Id).AsNoTracking().ToList();
-                    if(dataById ==null) return BadRequest(new { Message = "No Data" });
-                    return Ok(new { Message = "success!", Data = dataById });
-
+                    return dataById.Any() ? Ok(new { Message = "success!", Data = dataById }) : NotFound(new { Message = "No agents found." });
                 }
                 else if (!string.IsNullOrEmpty(VillageCode))
                 {
                     var dataByVillageCode = _dataContext.ViewO_Agents.Where(a => a.VillageCode == VillageCode).AsNoTracking().ToList();
-                    if (dataByVillageCode == null) return BadRequest(new { Message = "No Data" });
-                    return Ok(new { Message = "success!", Data = dataByVillageCode });
-
+                    return dataByVillageCode.Any() ? Ok(new { Message = "success!", Data = dataByVillageCode }) : NotFound(new { Message = "No agents found." });
                 }
                 else if (BranchId!=null || BranchId !=0)
                 {
                     var dataByBranch = _dataContext.ViewO_Agents.Where(a => a.BranchId == BranchId).AsNoTracking().ToList();
-                    if (dataByBranch == null) return BadRequest(new { Message = "No Data" });
-                    return Ok(new { Message = "success!", Data = dataByBranch });
+                    return dataByBranch.Any() ? Ok(new { Message = "success!", Data = dataByBranch }) : NotFound(new { Message = "No agents found." });
                 }
                 else
                 {
-                    return BadRequest("Please provide Id or VillageCode or BranchId");
+                    return BadRequest(new { Message = "Please provide Id or VillageCode or BranchId" });
                 }
             }
             catch (Exception ex)
@@ -82,7 +77,7 @@ namespace API.Controllers.Agent
             {
                 var newAgent = new Agents
                 {
-                    Id = GetNewAgentId(),
+                    Id = GetNewAgentId(agentDTO.VillageCode),
                     Name = agentDTO.Name,
                     Gender = agentDTO.Gender,
                     DOB = agentDTO.DOB,
@@ -99,7 +94,9 @@ namespace API.Controllers.Agent
                     Updated_By = agentDTO.Created_By,
                     Updated_At = DateTime.Now
                 };
-               
+                var findAgent= await _dataContext.tblO_Agent.Where(a=>a.Name ==agentDTO.Name && a.VillageCode==agentDTO.VillageCode ).FirstOrDefaultAsync();
+                if (findAgent != null)
+                    return BadRequest(new { Message = "Agent already exsist!" });
                 await _dataContext.tblO_Agent.AddAsync(newAgent);
                 await _dataContext.SaveChangesAsync();
                 var address = await _dataContext.ViewO_Address.FindAsync(agentDTO.VillageCode);
@@ -134,11 +131,17 @@ namespace API.Controllers.Agent
                 existingAgent.PositionId = agentDTO.PositionId;
                 existingAgent.BranchId = agentDTO.BranchId;
                 existingAgent.Commission = agentDTO.Commission;
-                existingAgent.VillageCode = agentDTO.VillageCode;
                 existingAgent.Active = agentDTO.Active;
                 existingAgent.Updated_By = agentDTO.Updated_By;
                 existingAgent.Updated_At = DateTime.Now;
 
+                var checkdata= await _dataContext.tblO_Agent.Where(a=>a.Id == existingAgent.Id && a.Name==existingAgent.Name).FirstOrDefaultAsync();
+                if (checkdata == null)
+                {
+                    var findAgent = await _dataContext.tblO_Agent.Where(a => a.Name == agentDTO.Name && a.VillageCode == agentDTO.VillageCode).FirstOrDefaultAsync();
+                    if (findAgent != null)
+                        return BadRequest(new { Message = "Agent already exsist!" });
+                }
                 await _dataContext.SaveChangesAsync();
                 var address = await _dataContext.ViewO_Address.FindAsync(agentDTO.VillageCode);
                 var position = await _dataContext.tblO_Position.FindAsync(agentDTO.PositionId);
@@ -151,31 +154,11 @@ namespace API.Controllers.Agent
                 return HandleException(ex, "An error occurred while updating data in the database.");
             }
         }
-        private string GetNewAgentId()
-        {
-            string NewId = "";
-            var getlastid = _dataContext.tblO_Agent.OrderByDescending(e => e.Id).FirstOrDefault();
-            var currentYear = DateTime.Now.Year.ToString();
-
-            if (getlastid == null)
-            {
-                return NewId = currentYear + "00001";
-            }
-
-            var lastIdString = getlastid.Id.ToString();
-            var yearid = lastIdString.Substring(0, 4);
-            int lastid = int.Parse(lastIdString.Substring(4)) + 1;
-
-            if (currentYear == yearid)
-            {
-                NewId = currentYear + lastid.ToString("D5");
-            }
-            else
-            {
-                NewId = currentYear + "00001";
-            }
-
-            return NewId;
+        private string GetNewAgentId(string VillageCode)
+        { 
+            var countData = _dataContext.tblO_Agent.Where(a => a.VillageCode == VillageCode).Count();
+            string id = VillageCode + (countData + 1).ToString("D2");
+            return id;
         }
     }
 
