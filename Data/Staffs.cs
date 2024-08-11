@@ -9,13 +9,13 @@ public class Staffs
     public int BranchId { get; set; }
     [Required]
     [StringLength(30)]
-    public string Kh_Name { get; set; }
+    public string Kh_Name { get; set; } = string.Empty;
     [Required]
     [StringLength(30)]
-    public string En_Name { get; set; }
+    public string En_Name { get; set; } = string.Empty;
     [Required]
     [StringLength(1)]
-    public string Gender { get; set; }
+    public string Gender { get; set; } = string.Empty;
     [Phone]
     [StringLength(11)]
     public string? Tel_Cellcard { get; set; }

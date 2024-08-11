@@ -54,7 +54,7 @@ namespace API.Controllers.User
                                  Created_by=user.Created_By,
                              };
 
-                var userList = result.ToList();
+                var userList = await result.ToListAsync();
                 if (userList is null) { return NotFound("No Branch !"); }
                 return Ok(userList);
             }
@@ -140,7 +140,7 @@ namespace API.Controllers.User
             try
             {
                 if (userDTO is null) return BadRequest(new { Message = "Model is Empty !" });
-
+                userDTO.Id =string.Empty;
                 var user = await _userManager.FindByIdAsync(userDTO.Id);
                 if (user is null) return BadRequest(new { Message = "Invalid User!" });
 
@@ -270,9 +270,9 @@ namespace API.Controllers.User
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             var userClaims = new[]
             {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.Role, user.Role)
+                     new Claim(ClaimTypes.NameIdentifier, user.Id ?? throw new ArgumentNullException(nameof(user.Id))),
+                new Claim(ClaimTypes.Name, user.UserName ?? throw new ArgumentNullException(nameof(user.UserName))),
+                new Claim(ClaimTypes.Role, user.Role ?? throw new ArgumentNullException(nameof(user.Role)))
                 };
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],

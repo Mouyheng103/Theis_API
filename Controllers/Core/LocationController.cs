@@ -91,12 +91,47 @@ namespace API.Controllers.Core
         {
             return Ok(UpdateName("tblOL_Villages", "VillageCode", "VillageName",id,newName));
         }
+        //private IActionResult GetEntries(string tblName, string tblCol, string value)
+        //{
+        //    try
+        //    {
+        //        // Get the table from the data context using reflection
+        //        var table = _dataContext.GetType().GetProperty(tblName).GetValue(_dataContext);
+
+        //        // Cast the table to IQueryable and filter it using dynamic LINQ
+        //        var result = ((IQueryable<object>)table).Where($"{tblCol} == @0", value).ToList();
+
+        //        if (result == null || !result.Any())
+        //        {
+        //            return NotFound("No Data!");
+        //        }
+        //        return Ok(result);
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+        //    }
+        //}
         private IActionResult GetEntries(string tblName, string tblCol, string value)
         {
             try
             {
                 // Get the table from the data context using reflection
-                var table = _dataContext.GetType().GetProperty(tblName).GetValue(_dataContext);
+                var tableProperty = _dataContext.GetType().GetProperty(tblName);
+                if (tableProperty == null)
+                {
+                    return NotFound("Table not found!");
+                }
+
+                var table = tableProperty.GetValue(_dataContext);
+                if (table == null)
+                {
+                    return NotFound("Table is empty or does not exist!");
+                }
 
                 // Cast the table to IQueryable and filter it using dynamic LINQ
                 var result = ((IQueryable<object>)table).Where($"{tblCol} == @0", value).ToList();
@@ -116,7 +151,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-       
+
         private IActionResult UpdateName(string tblName, string idCol, string nameCol, string id, string newName)
         {
             try

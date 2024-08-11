@@ -40,7 +40,7 @@ namespace API.Controllers.Core
             try
             {
                 if (branchName == null) { return BadRequest("please provide branch name!!"); }
-                var branch = _dataContext.tblO_Branch.Where(b => b.Name.Contains(branchName)).ToList();
+                var branch = await _dataContext.tblO_Branch.Where(b => b.Name.Contains(branchName)).ToListAsync();
                 if (branch == null || !branch.Any())
                 {
                     return NotFound(new { Message = $"No branches found with the name '{branchName}'." });

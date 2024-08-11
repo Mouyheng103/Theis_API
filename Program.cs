@@ -45,6 +45,21 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddTransient<IUserValidator<Users>, CustomUserValidator<Users>>();
+
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyHeader()
+                   .AllowAnyMethod();
+        });
+});
+// Use CORS policy
+
+
 //Add authentication to swagger UI
 builder.Services.AddSwaggerGen(options =>
 {
@@ -61,12 +76,12 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Use CORS policy
+app.UseCors("AllowAllOrigins");
+
+//user swagger
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -11,7 +11,7 @@ namespace API.Controllers.Users
     [Route("api/user/")]
     [ApiController]
     //[Authorize]
-    public class RoleController(RoleManager<Roles> roleManager, IConfiguration config) : ControllerBase
+    public class RoleController(RoleManager<Roles> roleManager) : ControllerBase
     {
         [HttpGet("getrole")]
         public IActionResult GetRole()

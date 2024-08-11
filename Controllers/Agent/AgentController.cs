@@ -77,7 +77,7 @@ namespace API.Controllers.Agent
             {
                 var newAgent = new Agents
                 {
-                    Id = GetNewAgentId(agentDTO.VillageCode),
+                    Id = GetNewAgentId(agentDTO.VillageCode ?? throw new ArgumentNullException(nameof(agentDTO.VillageCode))),
                     Name = agentDTO.Name,
                     Gender = agentDTO.Gender,
                     DOB = agentDTO.DOB,
