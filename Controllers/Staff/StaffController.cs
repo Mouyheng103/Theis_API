@@ -1,9 +1,10 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
-[Route("api/")]
+[Route("api/staff")]
 [ApiController]
 public class StaffController : ControllerBase
 {
@@ -21,7 +22,7 @@ public class StaffController : ControllerBase
         return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
     }
 
-    [HttpGet("getstaff")]
+    [HttpGet]
     public IActionResult GetStaff()
     {
         try
@@ -36,7 +37,7 @@ public class StaffController : ControllerBase
         }
     }
 
-    [HttpGet("findstaff/{staffCode}")]
+    [HttpGet("find/{staffCode}")]
     public async Task<IActionResult> FindStaff(int staffCode)
     {
 
@@ -53,7 +54,7 @@ public class StaffController : ControllerBase
         }
     }
 
-    [HttpPost("staff/add")]
+    [HttpPost]
     public async Task<IActionResult> AddStaff( Staffs staffDTO)
     {
         if (staffDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -95,7 +96,7 @@ public class StaffController : ControllerBase
         }
     }
 
-    [HttpPut("staff/update/{id}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> UpdateStaff(Guid id, Staffs staffDTO)
     {
         if (staffDTO == null) return BadRequest("Model is empty");

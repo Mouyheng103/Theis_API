@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ namespace API.Controllers.Core
 
         }
 
-        [HttpGet("getprovince")]
+        [HttpGet("province")]
         public IActionResult GetProvince()
         {
             try
@@ -36,22 +37,22 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpGet("getdistrict/{Province_Code}")]
+        [HttpGet("district/{Province_Code}")]
         public IActionResult GetDistrict(string Province_Code)
         {
             return Ok(GetEntries("tblOL_Districts", "ProvinceCode", Province_Code));
         }
-        [HttpGet("getcommune/{district_Code}")]
+        [HttpGet("commune/{district_Code}")]
         public IActionResult getCommune(string district_Code)
         {
             return Ok(GetEntries("tblOL_Communes", "DistrictCode",district_Code));
         }
-        [HttpGet("getvillage/{commune_Code}")]
+        [HttpGet("village/{commune_Code}")]
         public IActionResult getVillage(string commune_Code)
         {
             return Ok(GetEntries("tblOL_Villages", "CommuneCode", commune_Code));
         }
-        [HttpPut("province/update")]
+        [HttpPut("province")]
         public async Task<IActionResult> updateProvince(Province province)
         {
             try

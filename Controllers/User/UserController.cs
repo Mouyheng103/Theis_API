@@ -10,12 +10,12 @@ using Microsoft.Data.SqlClient;
 using static API.Data.serviceResponses;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API.Controllers.User
 {
     [Route("api/user")]
     [ApiController]
-
     public class UserController : ControllerBase
     {
 
@@ -31,7 +31,7 @@ namespace API.Controllers.User
             _config = config;
             _dataContext = dataContext;
         }
-        [HttpGet("getuser")]
+        [HttpGet]
         public async Task<IActionResult> GetUser()
         {
             try
@@ -67,7 +67,7 @@ namespace API.Controllers.User
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpPost("register")]
+        [HttpPost]
         public async Task<IActionResult> CreateAccount(UserDTO userDTO)
         {
             try
@@ -134,7 +134,7 @@ namespace API.Controllers.User
                 return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
         }
-        [HttpPut("update")]
+        [HttpPut]
         public async Task<IActionResult> UpdateUser(UserDTO userDTO)
         {
             try
@@ -203,54 +203,6 @@ namespace API.Controllers.User
                 return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
         }
-
-        [HttpPost("login")]
-        public async Task<ActionResult<LoginResponse>> LoginAccount(LoginDTO loginDTO)
-        {
-            if (loginDTO == null)
-                return NotFound(new { Message = "Model is Empty" });
-
-            var getUser = await _userManager.FindByNameAsync(loginDTO.UserName);
-            if (getUser is null)
-                return NotFound(new { Message = "User not found" });
-            if(getUser.Active==false)
-                return  BadRequest(new { Message = "Account is closed! " });
-            bool checkUserPasswords = await _userManager.CheckPasswordAsync(getUser, loginDTO.Password);
-            if (!checkUserPasswords)
-                return BadRequest(new { Message = "Invalid username/password" });
-
-            var getUserRole = await _userManager.GetRolesAsync(getUser);
-            var userSession = new UserSession(getUser.Id, getUser.UserName, getUserRole.First()); 
-            string token = GenerateToken(userSession);
-            return new LoginResponse(true, token,getUser.Id, loginDTO.UserName, getUserRole.First(), getUser.BranchId, "Login Success!");
-        }
-        [HttpPut("resetpassword")]
-        public async Task<IActionResult> ResetPasswordAsync(string userName,string branchName, string newPassword)
-        {
-            var user = await _userManager.FindByNameAsync(userName);
-            if (user == null)
-                throw new Exception("User not found.");
-
-            if (user.AllowResetPassword == false)
-                return BadRequest(new { Message = "Please Contact to ADMIN !!!" });
-
-            if(user.UserName != userName)
-                return BadRequest(new { Message = "Username or Branch Not Correct !!!" });
-
-            var branch = _dataContext.tblO_Branch.Where(b => b.Name.Contains(branchName)).FirstOrDefault();
-            if(branch == null)
-                return BadRequest(new { Message = "Username or Branch Not Correct !!!" });
-
-            var removePasswordResult = await _userManager.RemovePasswordAsync(user);
-            if (!removePasswordResult.Succeeded)
-                return BadRequest(new { Message = "Error removing current password.", Errors = removePasswordResult.Errors });
-
-            // Add the new password
-            var addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
-            if (addPasswordResult.Succeeded)
-                return Ok(new { Message = "Password reset successfully." });
-            return BadRequest(new { Message = "Error resetting password.", Errors = addPasswordResult.Errors });
-        }
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteUser(string id)
         {
@@ -263,25 +215,6 @@ namespace API.Controllers.User
             }
 
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = "User deletion failed" });
-        }
-        private string GenerateToken(UserSession user)
-        {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            var userClaims = new[]
-            {
-                     new Claim(ClaimTypes.NameIdentifier, user.Id ?? throw new ArgumentNullException(nameof(user.Id))),
-                new Claim(ClaimTypes.Name, user.UserName ?? throw new ArgumentNullException(nameof(user.UserName))),
-                new Claim(ClaimTypes.Role, user.Role ?? throw new ArgumentNullException(nameof(user.Role)))
-                };
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: userClaims,
-                expires: DateTime.Now.AddDays(1),
-                signingCredentials: credentials
-                );
-            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

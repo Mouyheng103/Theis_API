@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ namespace API.Controllers
             return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
         }
 
-        [HttpGet("get")]
+        [HttpGet]
         public IActionResult GetMillers()
         {
             try
@@ -80,7 +81,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpPost("add")]
+        [HttpPost]
         public async Task<IActionResult> AddMiller(Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -120,7 +121,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpPut("update/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateMiller(int id, Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest("Model is empty");

@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ namespace API.Controllers.Core
            
         }
 
-        [HttpGet("getbranch")]
+        [HttpGet("branch")]
         public IActionResult GetBranch()
         {
             try
@@ -34,7 +35,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpGet("findbranch/{branchName}")]
+        [HttpGet("branch/find/{branchName}")]
         public async Task<IActionResult> FindBranch(string branchName)
         {
             try
@@ -56,7 +57,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpPost("branch/add")]
+        [HttpPost("branch")]
         public async Task<IActionResult> AddBranch(Branch branchDTO)
         {
             if (branchDTO == null) { return BadRequest( new { Message = "Model is Empty"}); }
@@ -100,7 +101,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpPut("branch/update/{id}")]
+        [HttpPut("branch/{id}")]
         public async Task<IActionResult> UpdateBranch(int id,Branch branchDTO)
         {
             if (branchDTO == null) { return BadRequest("Model is Empty"); }
@@ -138,7 +139,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpDelete("branch/delete/{id}")]
+        [HttpDelete("branch/{id}")]
         public async Task<IActionResult> DeleteBranch(int id)
         {
             var findBranchById = await _dataContext.tblO_Branch.FindAsync(id);

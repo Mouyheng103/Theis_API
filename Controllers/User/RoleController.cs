@@ -8,18 +8,17 @@ using static API.Data.serviceResponses;
 namespace API.Controllers.Users
 {
 
-    [Route("api/user/")]
+    [Route("api/user/role")]
     [ApiController]
-    //[Authorize]
     public class RoleController(RoleManager<Roles> roleManager) : ControllerBase
     {
-        [HttpGet("getrole")]
+        [HttpGet]
         public IActionResult GetRole()
         {
             var role = roleManager.Roles.ToList();
             return Ok(role);
         }
-        [HttpGet("findrole/{roleName}")]
+        [HttpGet("find/{roleName}")]
         public async Task<IActionResult> FindRole(string roleName)
         {
             var role = await roleManager.FindByNameAsync(roleName);
@@ -29,7 +28,7 @@ namespace API.Controllers.Users
             }
             return Ok(role);
         }
-        [HttpPost("addrole")]
+        [HttpPost]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddRole(RoleDTO roleDTO)
         {
@@ -61,7 +60,7 @@ namespace API.Controllers.Users
             return Ok(new { Message = $"Role {roleDTO.Name} Has Been Created", Data = createdRoleData });
         }
 
-        [HttpPut("updaterole/{roleName}")]
+        [HttpPut("{roleName}")]
         public async Task<IActionResult> UpdateRole(string roleName, RoleDTO roleDTO)
         {
             var findRole = await roleManager.FindByNameAsync(roleName);
@@ -87,7 +86,7 @@ namespace API.Controllers.Users
             return Ok(new { Message = $"Role {roleName} updated successfully to {roleDTO.Name} with description {roleDTO.Description}", Data = updatedRoleData });
         }
 
-        [HttpDelete("deleterole/{roleName}")]
+        [HttpDelete("{roleName}")]
         public async Task<IActionResult> DeleteRole(string roleName)
         {
             var findrole = await roleManager.FindByNameAsync(roleName);

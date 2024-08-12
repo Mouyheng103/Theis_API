@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,7 @@ namespace API.Controllers.Customer
             return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
         }
 
-        [HttpGet("get")]
+        [HttpGet]
         public IActionResult GetCustomers()
         {
             try
@@ -74,7 +75,7 @@ namespace API.Controllers.Customer
             }
         }
 
-        [HttpPost("add")]
+        [HttpPost]
         public async Task<IActionResult> AddCustomer(Customers customerDTO)
         {
             if (customerDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -113,7 +114,7 @@ namespace API.Controllers.Customer
             }
         }
 
-        [HttpPut("update/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCustomer(string id, Customers customerDTO)
         {
             if (customerDTO == null) return BadRequest("Model is empty");

@@ -1,11 +1,12 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers.Core
 {
-    [Route("api/core/")]
+    [Route("api/core/position")]
     [ApiController]
     public class PositionController : Controller
     {
@@ -17,7 +18,7 @@ namespace API.Controllers.Core
 
         }
 
-        [HttpGet("getposition")]
+        [HttpGet]
         public IActionResult GetPosition()
         {
             try
@@ -35,7 +36,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpGet("findposition/{position}")]
+        [HttpGet("find/{position}")]
         public IActionResult FindPosition(string position)
         {
             try
@@ -54,7 +55,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpPost("position/add")]
+        [HttpPost]
         public async Task<IActionResult> AddPosition(Position positionDTO)
         {
             if (positionDTO == null)
@@ -108,7 +109,7 @@ namespace API.Controllers.Core
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
-        [HttpPut("position/update/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePosition(int id, Position positionDTO)
         {
             if (positionDTO == null)

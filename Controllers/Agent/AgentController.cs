@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -6,8 +7,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace API.Controllers.Agent
 {
-    [Route("api/")]
+    [Route("api/agent")]
     [ApiController]
+    [Authorize]
     public class AgentController : ControllerBase
     {
         private readonly DataContext _dataContext;
@@ -23,7 +25,7 @@ namespace API.Controllers.Agent
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = $"{customMessage} Error: {ex.Message}" });
             return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
         }
-        [HttpGet("agent/get")]
+        [HttpGet]
         public  IActionResult GetAgent() 
         {
             try
@@ -37,7 +39,7 @@ namespace API.Controllers.Agent
                 return HandleException(ex, "An error occurred while adding data to the database.");
             }
         }
-        [HttpGet("agent/find")]
+        [HttpGet("find")]
         public IActionResult FindAgent( string? Id, string? VillageCode, int? BranchId)
         {
             try
@@ -68,7 +70,7 @@ namespace API.Controllers.Agent
             }
         }
 
-        [HttpPost("agent/add")]
+        [HttpPost]
         public async Task<IActionResult> AddAgent(Agents agentDTO)
         {
             if (agentDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -111,7 +113,7 @@ namespace API.Controllers.Agent
             }
         }
 
-        [HttpPut("agent/update/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAgent(string id, Agents agentDTO)
         {
             if (agentDTO == null) return BadRequest("Model is empty");
