@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Swashbuckle.AspNetCore.Annotations;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
@@ -28,13 +29,20 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetMillers()
+        [SwaggerOperation(Summary = "get all miller", Description = "")]
+        public async Task<IActionResult> GetMillers()
         {
             try
             {
-                var millers = _dataContext.tblO_Miller.AsNoTracking().ToList();
-                return millers.Any() ? Ok(new { Message = "success!", Data = millers }) : NotFound(new { Message = "No millers found." });
-
+                var data = from miller in _dataContext.tblO_Miller
+                           join address in _dataContext.ViewO_Address on miller.VillageCode equals address.VillageCode
+                           select new
+                           {
+                               miller = miller,
+                               address = address,
+                           };
+                var dataList = await data.ToListAsync();
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No miller found." });
             }
             catch (Exception ex)
             {
@@ -42,38 +50,21 @@ namespace API.Controllers
             }
         }
 
-        [HttpGet("find")]
-        public IActionResult FindMiller(int? Id, string? Name)
+        [HttpGet("{id}")]
+        [SwaggerOperation(Summary = "get a single miller", Description = "")]
+        public async Task<IActionResult> GetMillers(int id)
         {
             try
             {
-                if (!string.IsNullOrEmpty(Name)) {
-                    var dataByName = (from miller in _dataContext.tblO_Miller.Where(m=>m.Name==Name).AsNoTracking()
-                                        join address in _dataContext.ViewO_Address.AsNoTracking()
-                                        on miller.VillageCode equals address.VillageCode
-                                        select new
-                                        {
-                                            Miller = miller,
-                                            Address = "ភូមិ" + address.VillageName + " ឃុំ" + address.CommuneName + " ឃុំ" + address.DistrictName + " ឃុំ" + address.ProvinceName
-                                        }).ToList();
-                    return dataByName.Any() ? Ok(new { Message = "success!", Data = dataByName }) : NotFound(new { Message = "No millers found." });
-                }
-                else if(Id !=0 || Id != null)
-                {
-                    var dataById = (from miller in _dataContext.tblO_Miller.Where(m => m.Id == Id).AsNoTracking()
-                                      join address in _dataContext.ViewO_Address.AsNoTracking()
-                                      on miller.VillageCode equals address.VillageCode
-                                      select new
-                                      {
-                                          Miller = miller,
-                                          Address = "ភូមិ" + address.VillageName + " ឃុំ" + address.CommuneName + " ឃុំ" + address.DistrictName + " ឃុំ" + address.ProvinceName
-                                      }).ToList();
-                    return dataById.Any() ? Ok(new { Message = "success!", Data = dataById }) : NotFound(new { Message = "No millers found." });
-                }
-                else
-                {
-                    return BadRequest(new { Message = "Please provide Id or Province or Name" });
-                }
+                var data = from miller in _dataContext.tblO_Miller.Where(x => x.Id == id)
+                           join address in _dataContext.ViewO_Address on miller.VillageCode equals address.VillageCode
+                           select new
+                           {
+                               miller = miller,
+                               address = address,
+                           };
+                var dataList = await data.ToListAsync();
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No miller found." });
             }
             catch (Exception ex)
             {
@@ -82,6 +73,7 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [SwaggerOperation(Summary = "add a single miller", Description = "")]
         public async Task<IActionResult> AddMiller(Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -122,6 +114,7 @@ namespace API.Controllers
         }
 
         [HttpPut("{id}")]
+        [SwaggerOperation(Summary = "replace a single miller", Description = "")]
         public async Task<IActionResult> UpdateMiller(int id, Millers millerDTO)
         {
             if (millerDTO == null) return BadRequest("Model is empty");
@@ -145,6 +138,25 @@ namespace API.Controllers
                 var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
                 var data = new { existingMiller, address };
                 return Ok(new { Message = "Miller updated successfully!",data=data });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "An error occurred while updating data in the database.");
+            }
+        }
+        [HttpDelete("{id}")]
+        [SwaggerOperation(Summary = "delete a single miller from DB", Description = "")]
+        public async Task<IActionResult> Delete(string id, string UserId)
+        {
+            try
+            {
+                var miller = await _dataContext.tblO_Miller.FindAsync(id);
+                if (miller == null) return NotFound(new { Message = "Miller not found!" });
+               
+                _dataContext.tblO_Miller.Remove(miller);
+                await _dataContext.SaveChangesAsync();
+                return Ok(new { result = "Miller has been deleted successfully" });
+                   
             }
             catch (Exception ex)
             {

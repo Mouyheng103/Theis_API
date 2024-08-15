@@ -1,21 +1,18 @@
 ﻿using API.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using static API.Data.serviceResponses;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using Microsoft.AspNetCore.Authorization;
+using System.Data;
+using System.ComponentModel;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace API.Controllers.User
 {
     [Route("api/user")]
     [ApiController]
+    [AllowAnonymous]
     public class UserController : ControllerBase
     {
 
@@ -32,6 +29,7 @@ namespace API.Controllers.User
             _dataContext = dataContext;
         }
         [HttpGet]
+        [SwaggerOperation(Summary = "Retrive all users", Description = "")]
         public async Task<IActionResult> GetUser()
         {
             try
@@ -45,13 +43,47 @@ namespace API.Controllers.User
                                  UserId = user.Id,
                                  UserName = user.UserName,
                                  Email = user.Email,
-                                 BranchId = branch.Id,
-                                 BranchName = branch.Name,
-                                 Role = role.Name,
-                                 AllowReset=user.AllowResetPassword,
-                                 Active=user.Active,
-                                 Created_At=user.Created_At,
-                                 Created_by=user.Created_By,
+                                 Branch = branch,
+                                 Role = role,
+                                 AllowReset = user.AllowResetPassword,
+                                 Active = user.Active,
+                                 Created_At = user.Created_At,
+                                 Created_by = user.Created_By,
+                             };
+                var userList = await result.ToListAsync();
+                if (userList is null) { return NotFound("No Branch !"); }
+                return Ok(userList);
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+            }
+        }
+        [HttpGet("{id}")]
+        [SwaggerOperation(Summary = "Retrive a single user", Description = "")]
+        public async Task<IActionResult> GetUser(string id)
+        {
+            try
+            {
+                var result = from user in _dataContext.Users where(user.Id==id)
+                             join userRole in _dataContext.UserRoles on user.Id equals userRole.UserId
+                             join role in _dataContext.Roles on userRole.RoleId equals role.Id
+                             join branch in _dataContext.tblO_Branch on user.BranchId equals branch.Id
+                             select new
+                             {
+                                 UserId = user.Id,
+                                 UserName = user.UserName,
+                                 Email = user.Email,
+                                 Branch = branch,
+                                 Role = role,
+                                 AllowReset = user.AllowResetPassword,
+                                 Active = user.Active,
+                                 Created_At = user.Created_At,
+                                 Created_by = user.Created_By,
                              };
 
                 var userList = await result.ToListAsync();
@@ -68,25 +100,26 @@ namespace API.Controllers.User
             }
         }
         [HttpPost]
+        [SwaggerOperation(Summary = "Add a single user", Description = "")]
         public async Task<IActionResult> CreateAccount(UserDTO userDTO)
         {
             try
             {
                 if (userDTO is null) return BadRequest(new { Message = "Model is empty" });
-                    var newUser = new Data.Users()
-                    {
-                        UserName = userDTO.UserName,
-                        Email = userDTO.Email,
-                        PasswordHash = userDTO.Password,
-                        BranchId = userDTO.BranchId,
-                        AllowResetPassword=false,
-                        Active=true,
-                        Created_At = DateTime.UtcNow,
-                        Created_By=userDTO.Created_By
-                    
-                    };
-                var user = await _userManager.FindByNameAsync(newUser.UserName);
-                if (user is not null) return BadRequest(new { Message = "User registered already" });
+                var newUser = new Data.Users()
+                {
+                    UserName = userDTO.UserName,
+                    Email = userDTO.Email,
+                    PasswordHash = userDTO.Password,
+                    BranchId = userDTO.BranchId,
+                    AllowResetPassword = false,
+                    Active = true,
+                    Created_At = DateTime.UtcNow,
+                    Created_By = userDTO.Created_By
+
+                };
+                var checkdup = await _dataContext.AspNetUsers.Where(u => u.UserName == userDTO.UserName).ToListAsync();
+                if (checkdup.Count > 0) return BadRequest(new { Message = "User registered already" });
                 try
                 {
                     var role = await _roleManager.FindByNameAsync(userDTO.RoleName);
@@ -99,19 +132,9 @@ namespace API.Controllers.User
                             var errors = string.Join(", ", createUser.Errors.Select(e => e.Description));
                             return BadRequest(new { Message = $"Error occurred: {errors}" });
                         }
-                        var branch= _dataContext.tblO_Branch.Where(b =>b.Id==newUser.BranchId).ToList();
-                        var createdUserData = new
-                        {
-                            newUser.Id,
-                            newUser.UserName,
-                            newUser.Email,
-                            branch, 
-                            newUser.Active,
-                            newUser.Created_At,
-                            newUser.Created_By,
-                            Role = userDTO.RoleName
-                        };
-                        return Ok(new { Message = "Account Created", Data = createdUserData });
+                        var branch = _dataContext.tblO_Branch.Where(b => b.Id == newUser.BranchId).ToList();
+                        var data = new { newUser, role, branch };
+                        return Ok(new { Message = "Account Created", Data = data });
                     }
                     else { return BadRequest(new { Message = "Please Select Role!" }); }
                 }
@@ -134,18 +157,19 @@ namespace API.Controllers.User
                 return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
         }
-        [HttpPut]
-        public async Task<IActionResult> UpdateUser(UserDTO userDTO)
+        [HttpPut("{id}")]
+        [SwaggerOperation(Summary = "Replace a single user", Description = "")]
+        public async Task<IActionResult> UpdateUser(string id, UserDTO userDTO)
         {
             try
             {
                 if (userDTO is null) return BadRequest(new { Message = "Model is Empty !" });
-                userDTO.Id =string.Empty;
-                var user = await _userManager.FindByIdAsync(userDTO.Id);
+
+                var user = await _userManager.FindByIdAsync(id);
                 if (user is null) return BadRequest(new { Message = "Invalid User!" });
 
                 var checkDupUsername = await _userManager.FindByNameAsync(userDTO.UserName);
-                if (checkDupUsername is not null && checkDupUsername.Id != userDTO.Id)
+                if (checkDupUsername is not null && checkDupUsername.Id != id)
                 {
                     return BadRequest(new { Message = "Username already taken!" });
                 }
@@ -180,19 +204,9 @@ namespace API.Controllers.User
                     return BadRequest(new { Message = $"Error occurred: {errors}" });
                 }
                 var branch = _dataContext.tblO_Branch.Where(b => b.Id == user.BranchId).ToList();
-
-                var updatedUserData = new
-                {
-                    user.Id,
-                    user.UserName,
-                    user.Email,
-                    branch,
-                    user.AllowResetPassword,
-                    user.Active,
-                    Role = userDTO.RoleName
-                };
-
-                return Ok(new { Message = "Account Updated", Data = updatedUserData });
+                var role = await _roleManager.FindByNameAsync(userDTO.RoleName);
+                var data = new { user, role, branch };
+                return Ok(new { Message = "Account Updated", Data = data });
             }
             catch (SqlException ex)
             {
@@ -203,12 +217,50 @@ namespace API.Controllers.User
                 return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
             }
         }
-        [HttpDelete("delete/{id}")]
-        public async Task<IActionResult> DeleteUser(string id)
+        [HttpPatch("{id}")]
+        [SwaggerOperation(Summary = "update status of user ==delete level admin", Description = "Master Admin can update all day")]
+        public async Task<IActionResult> UpdateUser(string id, string UserId)
         {
-            var findrole = await _userManager.FindByIdAsync(id);
-            if (findrole is null) return NotFound(new { error = "User not found" });
-            var deleteRole = await _userManager.DeleteAsync(findrole);
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                if (user is null) return BadRequest(new { Message = "Invalid User!" });
+                if (user.Created_At.Date != DateTime.Now.Date)
+                {
+                    var checkRole = await _dataContext.ViewAuth_UserRole.FindAsync(UserId);
+                    if (checkRole?.Name != "master admin")
+                        return BadRequest(new { Message = "You Don't have permission to delete. Please contact to master admin" });
+                }
+                user.Active = false;
+                user.Created_By = UserId;
+
+                var update = await _userManager.UpdateAsync(user);
+                if (!update.Succeeded)
+                {
+                    var errors = string.Join(", ", update.Errors.Select(e => e.Description));
+                    return BadRequest(new { Message = $"Error occurred: {errors}" });
+                }
+                return Ok(new { Message = "User has been deleted successfully"});
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+            }
+        }
+        [HttpDelete("{id}")]
+        [SwaggerOperation(Summary = "Master Admin Only", Description = "Delete from DB")]
+        public async Task<IActionResult> DeleteUser(string id,string UserId)
+        {
+            var checkrole=await _dataContext.ViewAuth_UserRole.FindAsync(UserId);
+            if(checkrole.Name!="master admin")
+                return BadRequest(new { Message = "You Don't have permission to delete. Please contact to Master Admin" });
+            var findUser = await _userManager.FindByIdAsync(id);
+            if (findUser is null) return NotFound(new { error = "User not found" });
+            var deleteRole = await _userManager.DeleteAsync(findUser);
             if (deleteRole.Succeeded)
             {
                 return Ok(new { result = $"User has been delete successfully" });

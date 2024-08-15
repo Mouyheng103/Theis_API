@@ -11,7 +11,7 @@ namespace API.Data
         [StringLength(50, ErrorMessage = "Name length can't be more than 100.")]
         public string Name { get; set; } = string.Empty;
 
-        public int? ProvinceId { get; set; }
+        public string? ProvinceCode { get; set; }
         [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
@@ -23,9 +23,9 @@ namespace API.Data
         public string? PhoneNumber {  get; set; }
         public string? InternetNumber { get; set; }
         public string? Location { get; set; }
-        public Guid? BranchMangerId { get; set; }
+        public int? BranchMangerId { get; set; }
         public DateTime Created_at { get; set; }
-        public Guid created_by { get; set; }
+        public string created_by { get; set; } = string.Empty;
         public bool IsActive {  get; set; }
     }
     public class Position
@@ -33,14 +33,12 @@ namespace API.Data
         [Key]
         public int Id { get; set; }
         [Required]
-        public string Kh_Name {  get; set; } = string.Empty;
-        [Required]
-        public string En_Name {  get; set; } = string.Empty;
+        public string Name {  get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public bool Active { get; set; }
-        public Guid Created_By { get; set; }
+        public string Created_By { get; set; } = string.Empty;
         public DateTime Created_At { get;set; }
-        public Guid Updated_By { get; set; }
+        public string Updated_By { get; set; } = string.Empty;
         public DateTime Updated_At { get; set; }
     }
     //Location

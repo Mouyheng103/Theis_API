@@ -1,6 +1,6 @@
 using API.Controllers.User;
 using API.Data;
-
+using API.Function;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -22,10 +22,16 @@ builder.Services.AddDbContext<DataContext>(options => options.UseSqlServer(build
 
 //identity
 //builder.Services.AddIdentity<Users,IdentityRole>().AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<IdentityRole>();
+//builder.Services.AddIdentity<Users, Roles>(options =>
+//{
+//    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+//}).AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<Roles>();
+
 builder.Services.AddIdentity<Users, Roles>(options =>
 {
     options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
-}).AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<Roles>();
+}).AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders(); //new
+
 //JWT
 builder.Services.AddAuthentication(options =>
 {
@@ -33,6 +39,7 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
+    options.SaveToken = true;//add new
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -43,20 +50,8 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
-        {
-            Console.WriteLine("Token validation failed: " + context.Exception.Message);
-            return Task.CompletedTask;
-        },
-        OnTokenValidated = context =>
-        {
-            Console.WriteLine("Token validated: " + context.SecurityToken);
-            return Task.CompletedTask;
-        }
-    };
 });
+builder.Services.AddScoped<TokenService>(); //add new
 builder.Services.AddTransient<IUserValidator<Users>, CustomUserValidator<Users>>();
 
 // Add CORS policy
@@ -87,7 +82,7 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
-
+   
     c.AddSecurityRequirement(new OpenApiSecurityRequirement()
     {
         {
@@ -106,6 +101,7 @@ builder.Services.AddSwaggerGen(c =>
             new List<string>()
         }
     });
+    c.EnableAnnotations();
 });
 //add autherize to all controller
 builder.Services.AddControllers(options =>

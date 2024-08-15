@@ -23,12 +23,12 @@ namespace API.Data
         public int Commission { get; set; }
         [Required]
         public int BranchId { get; set; }
-        public string? VillageCode { get; set; } = string.Empty;
+        public string VillageCode { get; set; } = string.Empty;
         public bool Active { get; set; }
-        public Guid? Created_By { get; set; }
-        public DateTime? Created_At { get; set; }
-        public Guid? Updated_By { get; set; }
-        public DateTime? Updated_At { get; set; }
+        public string? Created_By { get; set; }
+        public DateTime Created_At { get; set; }
+        public string? Updated_By { get; set; }
+        public DateTime Updated_At { get; set; }
     }
     public class ViewO_Agents
     {
@@ -38,7 +38,7 @@ namespace API.Data
         public string Name { get; set; } = string.Empty;
         [MaxLength(1)]
         public string Gender { get; set; } = string.Empty;
-        public DateTime? DOB { get; set; }
+        public DateOnly? DOB { get; set; }
         [Phone]
         public string? Tel_1 { get; set; }
         [Phone]
@@ -52,9 +52,9 @@ namespace API.Data
         public int BranchId { get; set; }
         public string VillageCode { get; set; } = string.Empty;
         public bool Active { get; set; }
-        public Guid? Created_By { get; set; }
+        public string? Created_By { get; set; }
         public DateTime? Created_At { get; set; }
-        public Guid? Updated_By { get; set; }
+        public string? Updated_By { get; set; }
         public DateTime? Updated_At { get; set; }
         public string Position_Name { get; set; } = string.Empty;
         public string Branch_Name { get; set; } = string.Empty;

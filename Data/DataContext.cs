@@ -36,9 +36,10 @@ namespace API.Data
 
         //User
         public DbSet<Users> AspNetUsers { get; set; }
+        public DbSet<ViewAuth_UserRole> ViewAuth_UserRole { get; set; }
 
         //View
-        
+
         public DbSet<Address> ViewO_Address { get; set; }
         public DataContext(DbContextOptions<DataContext> options)
             : base(options)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace API.Controllers.Customer
 {
@@ -25,57 +26,84 @@ namespace API.Controllers.Customer
         }
 
         [HttpGet]
-        public IActionResult GetCustomers()
+        [SwaggerOperation(Summary = "get all customer", Description = "")]
+        public async Task<IActionResult> GetCustomers()
         {
             try
             {
-                var customers = _dataContext.ViewO_Customers.AsNoTracking().ToList();
-                return customers.Any() ? Ok(new { Message = "success!", Data = customers }) : NotFound(new { Message = "No customers found." });
+
+                var data = from customer in _dataContext.tblO_Customer
+                           join agent in _dataContext.tblO_Agent on customer.AgentID equals agent.Id
+                           join address in _dataContext.ViewO_Address on agent.VillageCode equals address.VillageCode
+                           select new
+                           {
+                              customer=customer,
+                              agent=agent,
+                              address = address,
+                           };
+                var dataList = await data.ToListAsync();
+
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No csutomer found." });
             }
             catch (Exception ex)
             {
                 return HandleException(ex, "An error occurred while retrieving data from the database.");
             }
         }
-
-        [HttpGet("find")]
-        public IActionResult FindCustomer(string? Id, string? AgentId,string? VillageCode,int? BranchId)
+        [HttpGet("{id}")]
+        [SwaggerOperation(Summary = "get a single customer by id", Description = "")]
+        public async Task<IActionResult> GetCustomers(string id)
         {
             try
             {
-                if (!string.IsNullOrEmpty(Id))
-                {
-                    var dataById =  _dataContext.ViewO_Customers.Where(a => a.Id == Id).AsNoTracking().ToList();
-                    return dataById.Any() ? Ok(new { Message = "success!", Data = dataById }) : NotFound(new { Message = "No customer found." });
-                }
-                else if (!string.IsNullOrEmpty(VillageCode))
-                {
-                    var dataByVillageCode = _dataContext.ViewO_Customers.Where(a => a.VillageCode == VillageCode).AsNoTracking().ToList();
-                    return dataByVillageCode.Any() ? Ok(new { Message = "success!", Data = dataByVillageCode }) : NotFound(new { Message = "No customer found." });
-                }
-                else if (!string.IsNullOrEmpty(AgentId))
-                {
-                    var dataByAgent = _dataContext.ViewO_Customers.Where(a => a.AgentID == AgentId).AsNoTracking().ToList();
-                    return dataByAgent.Any() ? Ok(new { Message = "success!", Data = dataByAgent }) : NotFound(new { Message = "No customer found." });
 
-                }
-                else if (BranchId != null || BranchId != 0)
-                {
-                    var dataByBranch = _dataContext.ViewO_Customers.Where(a => a.BranchId == BranchId).AsNoTracking().ToList();
-                    return dataByBranch.Any() ? Ok(new { Message = "success!", Data = dataByBranch }) : NotFound(new { Message = "No customer found." });
-                }
-                else
-                {
-                    return BadRequest("Please provide Id or VillageCode or BranchId");
-                }
+                var data = from customer in _dataContext.tblO_Customer.Where(c=>c.Id==id)
+                           join agent in _dataContext.tblO_Agent on customer.AgentID equals agent.Id
+                           join address in _dataContext.ViewO_Address on agent.VillageCode equals address.VillageCode
+                           select new
+                           {
+                               customer = customer,
+                               agent = agent,
+                               address = address,
+                           };
+                var dataList = await data.ToListAsync();
+
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No csutomer found." });
             }
             catch (Exception ex)
             {
                 return HandleException(ex, "An error occurred while retrieving data from the database.");
             }
         }
+        [HttpGet("inBrand/{BranchId}")]
+        [SwaggerOperation(Summary = "get customers in a branch", Description = "")]
+        public async Task<IActionResult> GetCustomersByBranch(int BranchId)
+        {
+            try
+            {
+                var data = from customer in _dataContext.tblO_Customer
+                           join agent in _dataContext.tblO_Agent on customer.AgentID equals agent.Id
+                           join branch in _dataContext.tblO_Branch on agent.BranchId equals branch.Id
+                           join address in _dataContext.ViewO_Address on agent.VillageCode equals address.VillageCode
+                           where agent.BranchId == BranchId
+                           select new
+                           {
+                               customer = customer,
+                               address = address,
+                               agent = agent,
+                               branch = branch,
+                           };
+                var dataList = await data.ToListAsync();
 
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No csutomer found." });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "An error occurred while retrieving data from the database.");
+            }
+        }
         [HttpPost]
+        [SwaggerOperation(Summary = "add a single customer", Description = "")]
         public async Task<IActionResult> AddCustomer(Customers customerDTO)
         {
             if (customerDTO == null) return BadRequest(new { Message = "Model is empty" });
@@ -86,10 +114,8 @@ namespace API.Controllers.Customer
                 {
                     Id = GetNewCusId(),
                     AgentID = customerDTO.AgentID,
-                    FirstNameM = customerDTO.FirstNameM,
-                    LastNameM = customerDTO.LastNameM,
-                    FirstName = customerDTO.FirstName,
-                    LastName = customerDTO.LastName,  
+                    Wife_Name = customerDTO.Wife_Name,
+                    Husband_Name = customerDTO.Husband_Name,
                     Tel = customerDTO.Tel,
                     VillageCode = customerDTO.VillageCode,
                     DOB = customerDTO.DOB,
@@ -115,6 +141,7 @@ namespace API.Controllers.Customer
         }
 
         [HttpPut("{id}")]
+        [SwaggerOperation(Summary = "replace a single customer", Description = "")]
         public async Task<IActionResult> UpdateCustomer(string id, Customers customerDTO)
         {
             if (customerDTO == null) return BadRequest("Model is empty");
@@ -123,14 +150,17 @@ namespace API.Controllers.Customer
             var existingCustomer = await _dataContext.tblO_Customer.FindAsync(id);
             var address = await _dataContext.ViewO_Address.FindAsync(customerDTO.VillageCode);
             if (existingCustomer == null) return NotFound(new { Message = "Customer not found!" });
-
+            if (existingCustomer.Created_At.Date != DateTime.Now.Date)
+            {
+                var checkRole = await _dataContext.ViewAuth_UserRole.FindAsync(customerDTO.Updated_By);
+                if (checkRole.Name != "admin" && checkRole.Name != "master admin")
+                    return BadRequest(new { Message = "You Don't have permission to delete. Please contact to admin" });
+            }
             try
             {
                 existingCustomer.AgentID = customerDTO.AgentID;
-                existingCustomer.FirstNameM = customerDTO.FirstNameM;
-                existingCustomer.LastNameM = customerDTO.LastNameM;
-                existingCustomer.FirstName = customerDTO.FirstName;
-                existingCustomer.LastName = customerDTO.LastName;
+                existingCustomer.Wife_Name = customerDTO.Wife_Name;
+                existingCustomer.Husband_Name = customerDTO.Husband_Name;
                 existingCustomer.Tel = customerDTO.Tel;
                 existingCustomer.VillageCode = customerDTO.VillageCode;
                 existingCustomer.DOB = customerDTO.DOB;
@@ -141,6 +171,66 @@ namespace API.Controllers.Customer
 
                 await _dataContext.SaveChangesAsync();
                 return Ok(new { Message = "Customer updated successfully!", data = existingCustomer, address = address });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "An error occurred while updating data in the database.");
+            }
+        }
+        [HttpPatch("{id}")]
+        [SwaggerOperation(Summary = "update a single customer", Description = "user can update only in create date!")]
+        public async Task<IActionResult> UpdateStatus(string id, bool active, string UserId)
+        {
+            try
+            {
+                var customer = await _dataContext.tblO_Customer.FindAsync(id);
+                if (customer == null) return NotFound(new { Message = "customer not found!" });
+                if (customer.Created_At.Date != DateTime.Now.Date)
+                {
+                    var checkRole = await _dataContext.ViewAuth_UserRole.FindAsync(UserId);
+                    if (checkRole.Name != "admin" && checkRole.Name != "master admin")
+                        return BadRequest(new { Message = "You Don't have permission to delete. Please contact to admin" });
+                }
+                customer.Active = active;
+                customer.Updated_At = DateTime.Now;
+                customer.Updated_By = UserId;
+                await _dataContext.SaveChangesAsync();
+                return Ok(new { Message = "Customer Deleted successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "An error occurred while updating data in the database.");
+            }
+        }
+        [HttpDelete("{id}")]
+        [SwaggerOperation(Summary = "delete a single customer from DB", Description = "admin can delete only in create date!")]
+        public async Task<IActionResult> Delete(string id, string UserId)
+        {
+            try
+            {
+                var customer = await _dataContext.tblO_Customer.FindAsync(id);
+                if (customer == null) return NotFound(new { Message = "Customer not found!" });
+                var checkRole = await _dataContext.ViewAuth_UserRole.FindAsync(UserId);
+                if (customer.Created_At.Date != DateTime.Now.Date)
+                {
+                    if (checkRole.Name == "master admin")
+                    {
+                        _dataContext.tblO_Customer.Remove(customer);
+                        await _dataContext.SaveChangesAsync();
+                        return Ok(new { result = "Customer has been deleted successfully" });
+                    }
+                    return BadRequest(new { Message = "You Don't have permission to delete. Please contact to Master admin" });
+                }
+                else
+                {
+                    if (checkRole.Name == "admin")
+                    {
+                        _dataContext.tblO_Customer.Remove(customer);
+                        await _dataContext.SaveChangesAsync();
+                        return Ok(new { result = "Customer has been deleted successfully" });
+                    }
+                    return BadRequest(new { Message = "You Don't have permission to delete. Please contact to admin" });
+                }
             }
             catch (Exception ex)
             {

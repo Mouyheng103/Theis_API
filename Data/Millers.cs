@@ -17,9 +17,9 @@ namespace API.Data
         public string? Tel_3 { get; set; }
         public string VillageCode { get; set; } = string.Empty;
         public bool Active { get; set; }
-        public Guid Created_By { get; set; }
+        public string Created_By { get; set; } = string.Empty;
         public DateTime Created_At { get; set; }
-        public Guid? Updated_By { get; set; }
-        public DateTime? Updated_At { get; set; }
+        public string Updated_By { get; set; } = string.Empty;
+        public DateTime Updated_At { get; set; }
     }
 }

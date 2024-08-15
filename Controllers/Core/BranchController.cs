@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace API.Controllers.Core
 {
-    [Route("api/core/")]
+    [Route("api/core/branch")]
     [ApiController]
     public class BranchController : ControllerBase
     {
@@ -16,48 +17,44 @@ namespace API.Controllers.Core
             _dataContext = dataContext;
            
         }
-
-        [HttpGet("branch")]
-        public IActionResult GetBranch()
+        private IActionResult HandleException(Exception ex, string customMessage)
+        {
+            if (ex is SqlException)
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = $"{customMessage} Error: {ex.Message}" });
+            else if(ex is DbUpdateConcurrencyException)
+                 return StatusCode(StatusCodes.Status409Conflict, new { Message = "A concurrency error occurred while updating the data.", Error = ex.Message });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+        }
+        [HttpGet]
+        [SwaggerOperation(Summary = "retrive all branches", Description = "")]
+        public async Task<IActionResult> GetBranch()
         {
             try
             {
-                var branches = _dataContext.tblO_Branch.ToList();
-                if(branches is null) { return NotFound("No Branch !"); }
-                return Ok(branches);
-            }
-            catch (SqlException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+                var data =await _dataContext.tblO_Branch.ToListAsync();
+                return data.Any() ? Ok(new { Message = "success!", Data = data }) : NotFound(new { Message = "No branch found." });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while retrieving data to the database.");
             }
         }
-        [HttpGet("branch/find/{branchName}")]
-        public async Task<IActionResult> FindBranch(string branchName)
+        [HttpGet("{id}")]
+        [SwaggerOperation(Summary = "retrive a single branch", Description = "")]
+        public async Task<IActionResult> GetBranch(int id)
         {
             try
             {
-                if (branchName == null) { return BadRequest("please provide branch name!!"); }
-                var branch = await _dataContext.tblO_Branch.Where(b => b.Name.Contains(branchName)).ToListAsync();
-                if (branch == null || !branch.Any())
-                {
-                    return NotFound(new { Message = $"No branches found with the name '{branchName}'." });
-                }
-                return Ok(branch);
-            }
-            catch (SqlException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+                var data = await _dataContext.tblO_Branch.Where(b=>b.Id==id).ToListAsync();
+                return data.Any() ? Ok(new { Message = "success!", Data = data }) : NotFound(new { Message = "No branch found." });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while retrieving data to the database.");
             }
         }
-        [HttpPost("branch")]
+        [HttpPost]
+        [SwaggerOperation(Summary = "add a single branch", Description = "")]
         public async Task<IActionResult> AddBranch(Branch branchDTO)
         {
             if (branchDTO == null) { return BadRequest( new { Message = "Model is Empty"}); }
@@ -68,16 +65,17 @@ namespace API.Controllers.Core
                  var findBranch=_dataContext.tblO_Branch.Where(b => b.Name == branchDTO.Name).FirstOrDefault();
                  if (findBranch is not null) { return Ok(new { Message = "Name already Exsist !" }); }
             }
-            catch (SqlException ex){return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });}
-            catch (Exception ex) { return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message }); }
-            
+            catch (Exception ex)
+            {
+                return HandleException(ex, "An error occurred while retrieving data to the database.");
+            }
             try
             {
                 var newBranch = new Branch()
                 {
                     Id = getlastid+1,
                     Name = branchDTO.Name,
-                    ProvinceId = branchDTO.ProvinceId,
+                    ProvinceCode = branchDTO.ProvinceCode,
                     Email = branchDTO.Email,
                     Password = branchDTO.Password,
                     PhoneNumber = branchDTO.PhoneNumber,
@@ -85,35 +83,49 @@ namespace API.Controllers.Core
                     Location = branchDTO.Location,
                     BranchMangerId = branchDTO.BranchMangerId,
                     Created_at = DateTime.UtcNow,
-                    created_by = branchDTO.created_by, //will config
+                    created_by = branchDTO.created_by, 
                     IsActive = true
                 };
                 var addBranch = _dataContext.Add(newBranch);
+                var BM = await _dataContext.tblO_Staff.FindAsync(branchDTO.BranchMangerId);
+                var province = await _dataContext.tblOL_Provinces.FindAsync(branchDTO.ProvinceCode);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Branch {branchDTO.Name} add successfully !", data=newBranch });
-            }
-            catch (SqlException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+                var data = new
+                {
+                    Id = newBranch.Id,
+                    Name = branchDTO.Name,
+                    ProvinceId = province,
+                    Email = branchDTO.Email,
+                    Password = branchDTO.Password,
+                    PhoneNumber = branchDTO.PhoneNumber,
+                    InternetNumber = branchDTO.InternetNumber,
+                    Location = branchDTO.Location,
+                    BranchMangerId =BM,
+                    Created_at = DateTime.UtcNow,
+                    created_by = branchDTO.created_by,
+                    IsActive = true
+                };
+                return Ok(new { Message = $"Branch {branchDTO.Name} add successfully !", data= data });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while adding data to the database.");
             }
         }
-        [HttpPut("branch/{id}")]
+        [HttpPut("{id}")]
+        [SwaggerOperation(Summary = "update a single branch", Description = "")]
         public async Task<IActionResult> UpdateBranch(int id,Branch branchDTO)
         {
             if (branchDTO == null) { return BadRequest("Model is Empty"); }
             var findBranchById = await _dataContext.tblO_Branch.FindAsync(id);
             if (findBranchById == null) { return NotFound(new { Message = $"Branch Not Found !" }); }
             var finddup=_dataContext.tblO_Branch.Where(b=>b.Name == branchDTO.Name && b.Id!=id).FirstOrDefault();
-            if (finddup != null) { return BadRequest(new { Message = "Branch Already Exsist !!" }); }
+           if (finddup != null) { return BadRequest(new { Message = "Branch Already Exsist !!" }); }
             try
             {
 
                 findBranchById.Name = branchDTO.Name;
-                findBranchById.ProvinceId = branchDTO.ProvinceId;
+                findBranchById.ProvinceCode = branchDTO.ProvinceCode;
                 findBranchById.Email = branchDTO.Email;
                 findBranchById.Password = branchDTO.Password;
                 findBranchById.PhoneNumber = branchDTO.PhoneNumber;
@@ -121,25 +133,35 @@ namespace API.Controllers.Core
                 findBranchById.Location = branchDTO.Location;
                 findBranchById.BranchMangerId = branchDTO.BranchMangerId;
                 findBranchById.Created_at = DateTime.UtcNow;
-                findBranchById.created_by = branchDTO.created_by;//will config
+                findBranchById.created_by = branchDTO.created_by;
                 
+                var BM = await _dataContext.tblO_Staff.FindAsync(branchDTO.BranchMangerId);
+                var province = await _dataContext.tblOL_Provinces.FindAsync(branchDTO.ProvinceCode);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = $"Branch {branchDTO.Name} updated successfully !",data= findBranchById });
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                return StatusCode(StatusCodes.Status409Conflict, new { Message = "A concurrency error occurred while updating the data.", Error = ex.Message });
-            }
-            catch (DbUpdateException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "A database error occurred while updating the data.", Error = ex.Message });
+                var data = new
+                {
+                    Id = id,
+                    Name = branchDTO.Name,
+                    ProvinceId = province,
+                    Email = branchDTO.Email,
+                    Password = branchDTO.Password,
+                    PhoneNumber = branchDTO.PhoneNumber,
+                    InternetNumber = branchDTO.InternetNumber,
+                    Location = branchDTO.Location,
+                    BranchMangerId = BM,
+                    Created_at = DateTime.UtcNow,
+                    created_by = branchDTO.created_by,
+                    IsActive = true
+                };
+                return Ok(new { Message = $"Branch {branchDTO.Name} updated successfully !", data = data });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while updating data to the database.");
             }
         }
-        [HttpDelete("branch/{id}")]
+        [HttpDelete("{id}")]
+        [SwaggerOperation(Summary = "delete a single branch", Description = "")]
         public async Task<IActionResult> DeleteBranch(int id)
         {
             var findBranchById = await _dataContext.tblO_Branch.FindAsync(id);
@@ -150,13 +172,9 @@ namespace API.Controllers.Core
                 await _dataContext.SaveChangesAsync();
                 return Ok(new { Message = $"Branch deleted successfully !" });
             }
-            catch (DbUpdateException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "A database error occurred while updating the data.", Error = ex.Message });
-            }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while deleting data to the database.");
             }
         }
     }
