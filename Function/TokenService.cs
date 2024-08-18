@@ -1,5 +1,6 @@
 ﻿using API.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -11,31 +12,41 @@ namespace API.Function
     public class TokenService
     {
         private readonly UserManager<Users> _userManager;
+        private readonly IMemoryCache _cache;
         private readonly IConfiguration _configuration;
 
-        public TokenService(UserManager<Users> userManager, IConfiguration configuration)
+
+        public TokenService(UserManager<Users> userManager, IConfiguration configuration, IMemoryCache cache)
         {
             _userManager = userManager;
             _configuration = configuration;
+            _cache = cache;
         }
-
+        public Task AddTokenToBlacklist(string token)
+        {
+            var expiry = DateTime.Now.AddHours(1); 
+            _cache.Set(token, true, expiry);
+            return Task.CompletedTask;
+        }
+        public Task<bool> IsTokenBlacklisted(string token)
+        {
+            return Task.FromResult(_cache.TryGetValue(token, out _));
+        }
         public async Task<TokenResponse> GenerateToken(Users user)
         {
             var authClaims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.UserName),
+             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            //var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
 
             var token = new JwtSecurityToken(
-                //issuer: _configuration["JWT:ValidIssuer"],
-                //audience: _configuration["JWT:ValidAudience"],
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
-                expires: DateTime.Now.AddHours(1),
+                expires: DateTime.Now.AddMinutes(int.Parse(_configuration["Jwt:DurationInMinutes"])),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );

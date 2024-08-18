@@ -11,8 +11,8 @@ namespace API.Data
         public bool Active { get; set; }
         public DateTime Created_At { get; set; }
         public string Created_By { get; set; } = string.Empty;
-        public string RefreshToken { get; set; } = string.Empty;
-        public DateTime RefreshTokenExpiryTime { get; set; }
+        public string? RefreshToken { get; set; } 
+        public DateTime? RefreshTokenExpiryTime { get; set; }
     }
     public class Roles : IdentityRole
     {

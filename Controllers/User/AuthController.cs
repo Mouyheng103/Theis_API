@@ -117,9 +117,64 @@ namespace API.Controllers.User
 
             var tokenResponse = await _tokenService.GenerateToken(user);
             var getUserRole = await _userManager.GetRolesAsync(user);
-            var data = new { tokenResponse,user.Id,loginRequest.UserName,user.BranchId };
+            var data = new
+            {
+                Token = tokenResponse.Token,
+                Expiration = tokenResponse.Expiration,
+                RefreshToken = tokenResponse.RefreshToken,
+                User = new
+                {
+                    Id = user.Id,
+                    UserName = loginRequest.UserName,
+                    BranchId = user.BranchId,
+                    Roles = getUserRole
+                }
+            };
             return Ok(data);
+
         }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return Unauthorized("User is not authenticated.");
+            }
+
+            var userName = User.Identity.Name;
+            if (string.IsNullOrEmpty(userName))
+            {
+                return Unauthorized("User identity name is not found.");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            // Invalidate the refresh token
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = DateTime.MinValue;
+
+            // Optionally, add the current access token to a blacklist
+            var token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            await _tokenService.AddTokenToBlacklist(token);
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return StatusCode(500, "Logout failed. Could not update the user.");
+            }
+
+            // Sign out the user from the identity system
+            await _signInManager.SignOutAsync();
+
+            return Ok(new { message = "Logout successful" });
+        }
+
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken(TokenRequest tokenRequest)
         {
@@ -162,7 +217,6 @@ namespace API.Controllers.User
             {
                 throw new SecurityTokenException("Invalid token");
             }
-
             return principal;
         }
     }

@@ -21,16 +21,10 @@ builder.Services.AddDbContext<DataContext>(options => options.UseSqlServer(build
 //Add Identity and JWT Authentication
 
 //identity
-//builder.Services.AddIdentity<Users,IdentityRole>().AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<IdentityRole>();
-//builder.Services.AddIdentity<Users, Roles>(options =>
-//{
-//    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
-//}).AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<Roles>();
-
 builder.Services.AddIdentity<Users, Roles>(options =>
 {
     options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
-}).AddEntityFrameworkStores<DataContext>().AddDefaultTokenProviders(); //new
+}).AddEntityFrameworkStores<DataContext>().AddSignInManager().AddRoles<Roles>();
 
 //JWT
 builder.Services.AddAuthentication(options =>
@@ -51,6 +45,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
 });
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<TokenService>(); //add new
 builder.Services.AddTransient<IUserValidator<Users>, CustomUserValidator<Users>>();
 
@@ -114,10 +109,6 @@ builder.Services.AddControllers(options =>
 
 var app = builder.Build();
 
-
-
-
-
 // Use CORS policy
 app.UseCors("AllowAllOrigins");
 
@@ -127,6 +118,9 @@ app.UseAuthorization();
 //user swagger
 app.UseSwagger();
 app.UseSwaggerUI();
+
+//add middleware
+app.UseMiddleware<TokenValidationMiddleware>();
 
 app.MapControllers();
 
