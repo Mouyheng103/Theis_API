@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using static API.Data.serviceResponses;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace API.Controllers.User
 {
@@ -33,47 +35,7 @@ namespace API.Controllers.User
             _signInManager = signInManager;
             _signInManager = signInManager;
         }
-        //[HttpPost("login")]
-        //public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDTO loginDTO)
-        //{
-
-        //    if (loginDTO == null)
-        //        return NotFound(new { Message = "Model is Empty" });
-
-        //    var getUser = await _userManager.FindByNameAsync(loginDTO.UserName);
-        //    if (getUser is null)
-        //        return NotFound(new { Message = "User not found" });
-        //    if (getUser.Active == false)
-        //        return BadRequest(new { Message = "Account is closed! " });
-        //    bool checkUserPasswords = await _userManager.CheckPasswordAsync(getUser, loginDTO.Password);
-        //    if (!checkUserPasswords)
-        //        return BadRequest(new { Message = "Invalid username/password" });
-
-        //    var getUserRole = await _userManager.GetRolesAsync(getUser);
-        //    var userSession = new UserSession(getUser.Id, getUser.UserName, getUserRole.First());
-        //    string token = GenerateJwtToken(userSession);
-        //    return new LoginResponse(true, token, getUser.Id, loginDTO.UserName, getUserRole.First(), getUser.BranchId, "Login Success!");
-        //}
-        //private string GenerateJwtToken(UserSession user)
-        //{
-        //    var tokenHandler = new JwtSecurityTokenHandler();
-        //    var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
-        //    var tokenDescriptor = new SecurityTokenDescriptor
-        //    {
-        //        Subject = new ClaimsIdentity(new[]
-        //        {
-        //            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-        //            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        //        }),
-        //        Expires = DateTime.UtcNow.AddMinutes(Convert.ToInt32(_config["Jwt:DurationInMinutes"])),
-        //        Audience = _config["Jwt:Audience"],  // Add this line
-        //        Issuer = _config["Jwt:Issuer"],
-        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        //    };
-
-        //    var token = tokenHandler.CreateToken(tokenDescriptor);
-        //    return tokenHandler.WriteToken(token);
-        //}
+        
         [HttpPut("resetpassword"), Authorize]
         public async Task<IActionResult> ResetPasswordAsync(string userName, string branchName, string newPassword)
         {
@@ -117,6 +79,7 @@ namespace API.Controllers.User
 
             var tokenResponse = await _tokenService.GenerateToken(user);
             var getUserRole = await _userManager.GetRolesAsync(user);
+            var branch = await _dataContext.tblO_Branch.Where(x => x.Id == user.BranchId).FirstAsync();
             var data = new
             {
                 Token = tokenResponse.Token,
@@ -126,12 +89,11 @@ namespace API.Controllers.User
                 {
                     Id = user.Id,
                     UserName = loginRequest.UserName,
-                    BranchId = user.BranchId,
+                    BranchId = branch,
                     Roles = getUserRole
                 }
             };
-            return Ok(data);
-
+            return Ok(new { Message = "Login successfully.", Data=data });
         }
 
         [HttpPost("logout")]
@@ -193,10 +155,10 @@ namespace API.Controllers.User
             {
                 return BadRequest("Invalid refresh token");
             }
-
             var newToken = await _tokenService.GenerateToken(user);
 
-            return Ok(newToken);
+            return Ok(new { Message = "New Token.", Data = newToken });
+
         }
 
         private ClaimsPrincipal GetPrincipalFromExpiredToken(string token)

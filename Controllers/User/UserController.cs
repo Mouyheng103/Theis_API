@@ -28,6 +28,12 @@ namespace API.Controllers.User
             _config = config;
             _dataContext = dataContext;
         }
+        private IActionResult HandleException(Exception ex, string customMessage)
+        {
+            if (ex is SqlException)
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = $"{customMessage} Error: {ex.Message}" });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+        }
         [HttpGet]
         [SwaggerOperation(Summary = "Retrive all users", Description = "")]
         public async Task<IActionResult> GetUser()
@@ -38,29 +44,25 @@ namespace API.Controllers.User
                              join userRole in _dataContext.UserRoles on user.Id equals userRole.UserId
                              join role in _dataContext.Roles on userRole.RoleId equals role.Id
                              join branch in _dataContext.tblO_Branch on user.BranchId equals branch.Id
+                             join manager in _dataContext.tblO_Staff on branch.BranchMangerId equals manager.Id
                              select new
                              {
                                  UserId = user.Id,
                                  UserName = user.UserName,
                                  Email = user.Email,
-                                 Branch = branch,
+                                 Branch = new { branch=branch,manager=manager},
                                  Role = role,
                                  AllowReset = user.AllowResetPassword,
                                  Active = user.Active,
                                  Created_At = user.Created_At,
                                  Created_by = user.Created_By,
                              };
-                var userList = await result.ToListAsync();
-                if (userList is null) { return NotFound("No Branch !"); }
-                return Ok(userList);
-            }
-            catch (SqlException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+                var dataList = await result.ToListAsync();
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No user found." });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while retrive data to the database.");
             }
         }
         [HttpGet("{id}")]
@@ -69,34 +71,29 @@ namespace API.Controllers.User
         {
             try
             {
-                var result = from user in _dataContext.Users where(user.Id==id)
+                var result = from user in _dataContext.Users where(user.Id==id) 
                              join userRole in _dataContext.UserRoles on user.Id equals userRole.UserId
                              join role in _dataContext.Roles on userRole.RoleId equals role.Id
                              join branch in _dataContext.tblO_Branch on user.BranchId equals branch.Id
+                             join manager in _dataContext.tblO_Staff on branch.BranchMangerId equals manager.Id
                              select new
                              {
                                  UserId = user.Id,
                                  UserName = user.UserName,
                                  Email = user.Email,
-                                 Branch = branch,
+                                 Branch = new { branch = branch, manager = manager },
                                  Role = role,
                                  AllowReset = user.AllowResetPassword,
                                  Active = user.Active,
                                  Created_At = user.Created_At,
                                  Created_by = user.Created_By,
                              };
-
-                var userList = await result.ToListAsync();
-                if (userList is null) { return NotFound("No Branch !"); }
-                return Ok(userList);
-            }
-            catch (SqlException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving data from the database.", Error = ex.Message });
+                var dataList = await result.ToListAsync();
+                return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No user found." });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred.", Error = ex.Message });
+                return HandleException(ex, "An error occurred while retrive data to the database.");
             }
         }
         [HttpPost]
@@ -132,8 +129,13 @@ namespace API.Controllers.User
                             var errors = string.Join(", ", createUser.Errors.Select(e => e.Description));
                             return BadRequest(new { Message = $"Error occurred: {errors}" });
                         }
-                        var branch = _dataContext.tblO_Branch.Where(b => b.Id == newUser.BranchId).ToList();
-                        var data = new { newUser, role, branch };
+                        var branch = _dataContext.tblO_Branch.Where(b => b.Id == newUser.BranchId).First();
+                        var manger = _dataContext.tblO_Staff.Where(x => x.Id == branch.BranchMangerId).ToList();
+                        var data = new {
+                                            user = newUser,
+                                            role=role, 
+                                            branch =new {branch=branch,manager= manger }
+                                       };
                         return Ok(new { Message = "Account Created", Data = data });
                     }
                     else { return BadRequest(new { Message = "Please Select Role!" }); }
@@ -148,13 +150,9 @@ namespace API.Controllers.User
                     return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
                 }
             }
-            catch (SqlException ex)
-            {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
-            }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+                return HandleException(ex, "An error occurred while adding data to the database.");
             }
         }
         [HttpPut("{id}")]
@@ -203,18 +201,22 @@ namespace API.Controllers.User
                     var errors = string.Join(", ", update.Errors.Select(e => e.Description));
                     return BadRequest(new { Message = $"Error occurred: {errors}" });
                 }
-                var branch = _dataContext.tblO_Branch.Where(b => b.Id == user.BranchId).ToList();
+               
+                var branch = _dataContext.tblO_Branch.Where(b => b.Id == user.BranchId).First();
                 var role = await _roleManager.FindByNameAsync(userDTO.RoleName);
-                var data = new { user, role, branch };
-                return Ok(new { Message = "Account Updated", Data = data });
-            }
-            catch (SqlException ex)
-            {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+                var manger = _dataContext.tblO_Staff.Where(x => x.Id == branch.BranchMangerId).ToList();
+                var data = new
+                {
+                    user = user,
+                    role = role,
+                    branch = new { branch = branch, manager = manger }
+                    
+                };
+                return Ok(new { Message = "Account Created", Data = data });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+                return HandleException(ex, "An error occurred while updating data to the database.");
             }
         }
         [HttpPatch("{id}")]
@@ -242,13 +244,9 @@ namespace API.Controllers.User
                 }
                 return Ok(new { Message = "User has been deleted successfully"});
             }
-            catch (SqlException ex)
-            {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
-            }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = $"Error occurred: {ex.Message}" });
+                return HandleException(ex, "An error occurred while updating data to the database.");
             }
         }
         [HttpDelete("{id}")]

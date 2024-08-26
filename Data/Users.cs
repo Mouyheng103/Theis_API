@@ -47,6 +47,17 @@ namespace API.Data
         public string RoleId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
     }
+    public class ViewO_Users
+    {
+        [Key]
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+
+    }
     public class RoleDTO
     {
         [Required]

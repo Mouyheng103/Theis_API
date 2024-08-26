@@ -5,13 +5,14 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System;
 
 
 namespace API.Controllers
 {
     [Route("api/miller/")]
     [ApiController]
+    [AllowAnonymous]
     public class MillerController : ControllerBase
     {
         private readonly DataContext _dataContext;
@@ -38,8 +39,18 @@ namespace API.Controllers
                            join address in _dataContext.ViewO_Address on miller.VillageCode equals address.VillageCode
                            select new
                            {
-                               miller = miller,
-                               address = address,
+                               Id=miller.Id,
+                               Name=miller.Name,
+                               Description= miller.Description,
+                               Tel_1=miller.Tel_1,
+                               Tel_2=miller.Tel_2,
+                               Tel_3=miller.Tel_3,
+                               Active=miller.Active,
+                               Created_By=miller.Created_By,
+                               Created_At=miller.Created_At,
+                               Updated_By=miller.Updated_By,
+                               Updated_At=miller.Updated_At,
+                               Address = address,
                            };
                 var dataList = await data.ToListAsync();
                 return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No miller found." });
@@ -56,12 +67,23 @@ namespace API.Controllers
         {
             try
             {
-                var data = from miller in _dataContext.tblO_Miller.Where(x => x.Id == id)
+
+                var data = from miller in _dataContext.tblO_Miller where miller.Id == id
                            join address in _dataContext.ViewO_Address on miller.VillageCode equals address.VillageCode
                            select new
                            {
-                               miller = miller,
-                               address = address,
+                               Id = miller.Id,
+                               Name = miller.Name,
+                               Description = miller.Description,
+                               Tel_1 = miller.Tel_1,
+                               Tel_2 = miller.Tel_2,
+                               Tel_3 = miller.Tel_3,
+                               Active = miller.Active,
+                               Created_By = miller.Created_By,
+                               Created_At = miller.Created_At,
+                               Updated_By = miller.Updated_By,
+                               Updated_At = miller.Updated_At,
+                               Address = address,
                            };
                 var dataList = await data.ToListAsync();
                 return dataList.Any() ? Ok(new { Message = "success!", Data = dataList }) : NotFound(new { Message = "No miller found." });
@@ -103,7 +125,21 @@ namespace API.Controllers
                 await _dataContext.SaveChangesAsync();
 
                 var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
-                var data=new {newMiller, address};
+                var data=new 
+                {
+                    Id = newMiller.Id,
+                    Name = newMiller.Name,
+                    Description = newMiller.Description,
+                    Tel_1 = newMiller.Tel_1,
+                    Tel_2 = newMiller.Tel_2,
+                    Tel_3 = newMiller.Tel_3,
+                    Active = newMiller.Active,
+                    Created_By = newMiller.Created_By,
+                    Created_At = newMiller.Created_At,
+                    Updated_By = newMiller.Updated_By,
+                    Updated_At = newMiller.Updated_At,
+                    Address = address,
+                };
 
                 return Ok(new { Message = "Miller added successfully!",data=data });
             }
@@ -136,7 +172,21 @@ namespace API.Controllers
                 await _dataContext.SaveChangesAsync();
 
                 var address = await _dataContext.ViewO_Address.FindAsync(millerDTO.VillageCode);
-                var data = new { existingMiller, address };
+                var data = new
+                {
+                    Id = existingMiller.Id,
+                    Name = existingMiller.Name,
+                    Description = existingMiller.Description,
+                    Tel_1 = existingMiller.Tel_1,
+                    Tel_2 = existingMiller.Tel_2,
+                    Tel_3 = existingMiller.Tel_3,
+                    Active = existingMiller.Active,
+                    Created_By = existingMiller.Created_By,
+                    Created_At = existingMiller.Created_At,
+                    Updated_By = existingMiller.Updated_By,
+                    Updated_At = existingMiller.Updated_At,
+                    Address = address,
+                };
                 return Ok(new { Message = "Miller updated successfully!",data=data });
             }
             catch (Exception ex)

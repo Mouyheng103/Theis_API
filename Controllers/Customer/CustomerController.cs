@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
+using System;
 
 namespace API.Controllers.Customer
 {
@@ -37,9 +39,19 @@ namespace API.Controllers.Customer
                            join address in _dataContext.ViewO_Address on agent.VillageCode equals address.VillageCode
                            select new
                            {
-                              customer=customer,
-                              agent=agent,
-                              address = address,
+                               Id= customer.Id,
+                               Wife_Name=customer.Wife_Name,
+                               Husband_Name=customer.Husband_Name,
+                               Tel=customer.Tel,
+                               DOB=customer.DOB,
+                               BlackList=customer.BlackList,
+                               Active=customer.Active,
+                               Created_By=customer.Created_By,
+                               Created_At=customer.Created_At,
+                               Updated_By=customer.Updated_By,
+                               Updated_At=customer.Updated_At,
+                               agent=agent,
+                               address = address,
                            };
                 var dataList = await data.ToListAsync();
 
@@ -57,12 +69,22 @@ namespace API.Controllers.Customer
             try
             {
 
-                var data = from customer in _dataContext.tblO_Customer.Where(c=>c.Id==id)
+                var data = from customer in _dataContext.tblO_Customer where customer.Id == id
                            join agent in _dataContext.tblO_Agent on customer.AgentID equals agent.Id
                            join address in _dataContext.ViewO_Address on agent.VillageCode equals address.VillageCode
                            select new
                            {
-                               customer = customer,
+                               Id = customer.Id,
+                               Wife_Name = customer.Wife_Name,
+                               Husband_Name = customer.Husband_Name,
+                               Tel = customer.Tel,
+                               DOB = customer.DOB,
+                               BlackList = customer.BlackList,
+                               Active = customer.Active,
+                               Created_By = customer.Created_By,
+                               Created_At = customer.Created_At,
+                               Updated_By = customer.Updated_By,
+                               Updated_At = customer.Updated_At,
                                agent = agent,
                                address = address,
                            };
@@ -88,9 +110,19 @@ namespace API.Controllers.Customer
                            where agent.BranchId == BranchId
                            select new
                            {
-                               customer = customer,
-                               address = address,
+                               Id = customer.Id,
+                               Wife_Name = customer.Wife_Name,
+                               Husband_Name = customer.Husband_Name,
+                               Tel = customer.Tel,
+                               DOB = customer.DOB,
+                               BlackList = customer.BlackList,
+                               Active = customer.Active,
+                               Created_By = customer.Created_By,
+                               Created_At = customer.Created_At,
+                               Updated_By = customer.Updated_By,
+                               Updated_At = customer.Updated_At,
                                agent = agent,
+                               address = address,
                                branch = branch,
                            };
                 var dataList = await data.ToListAsync();
@@ -131,7 +163,22 @@ namespace API.Controllers.Customer
                 
                 await _dataContext.tblO_Customer.AddAsync(newCustomer);
                 await _dataContext.SaveChangesAsync();
-                var data = new { newCustomer, address, agent };
+                var data = new 
+                {
+                    Id = newCustomer.Id,
+                    Wife_Name = newCustomer.Wife_Name,
+                    Husband_Name = newCustomer.Husband_Name,
+                    Tel = newCustomer.Tel,
+                    DOB = newCustomer.DOB,
+                    BlackList = newCustomer.BlackList,
+                    Active = newCustomer.Active,
+                    Created_By = newCustomer.Created_By,
+                    Created_At = newCustomer.Created_At,
+                    Updated_By = newCustomer.Updated_By,
+                    Updated_At = newCustomer.Updated_At,
+                    agent = agent,
+                    address = address
+                };
                 return Ok(new { Message = "Customer added successfully!", data = data });
             }
             catch (Exception ex)
@@ -148,7 +195,6 @@ namespace API.Controllers.Customer
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var existingCustomer = await _dataContext.tblO_Customer.FindAsync(id);
-            var address = await _dataContext.ViewO_Address.FindAsync(customerDTO.VillageCode);
             if (existingCustomer == null) return NotFound(new { Message = "Customer not found!" });
             if (existingCustomer.Created_At.Date != DateTime.Now.Date)
             {
@@ -168,9 +214,26 @@ namespace API.Controllers.Customer
                 existingCustomer.Active = customerDTO.Active;
                 existingCustomer.Updated_By = customerDTO.Updated_By;
                 existingCustomer.Updated_At = DateTime.Now;
-
+                var address = await _dataContext.ViewO_Address.FindAsync(customerDTO.VillageCode);
+                var agent = await _dataContext.tblO_Agent.FindAsync(customerDTO.AgentID);
                 await _dataContext.SaveChangesAsync();
-                return Ok(new { Message = "Customer updated successfully!", data = existingCustomer, address = address });
+                var data = new
+                {
+                    Id = existingCustomer.Id,
+                    Wife_Name = existingCustomer.Wife_Name,
+                    Husband_Name = existingCustomer.Husband_Name,
+                    Tel = existingCustomer.Tel,
+                    DOB = existingCustomer.DOB,
+                    BlackList = existingCustomer.BlackList,
+                    Active = existingCustomer.Active,
+                    Created_By = existingCustomer.Created_By,
+                    Created_At = existingCustomer.Created_At,
+                    Updated_By = existingCustomer.Updated_By,
+                    Updated_At = existingCustomer.Updated_At,
+                    agent = agent,
+                    address = address
+                };
+                return Ok(new { Message = "Customer updated successfully!", data = data });
             }
             catch (Exception ex)
             {

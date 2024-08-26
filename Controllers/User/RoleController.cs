@@ -3,26 +3,34 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Data;
 
 namespace API.Controllers.Users
 {
 
     [Route("api/role")]
     [ApiController]
-    public class RoleController(RoleManager<Roles> roleManager) : ControllerBase
+    public class RoleController : ControllerBase
     {
+        private readonly DataContext _dataContext;
+        private readonly RoleManager<Roles> _roleManager;
+        public RoleController(RoleManager<Roles> roleManager,DataContext dataContext)
+        {
+            _dataContext = dataContext;
+            _roleManager=roleManager;
+        }
         [HttpGet]
         [SwaggerOperation(Summary = "Retrive all roles", Description = "")]
         public IActionResult GetRole()
         {
-            var role = roleManager.Roles.ToList();
+            var role = _roleManager.Roles.ToList();
             return Ok(role);
         }
         [HttpGet("{id}")]
         [SwaggerOperation(Summary = "Retrive a single role", Description = "")]
         public async Task<IActionResult> FindRole(string id)
         {
-            var role = await roleManager.FindByIdAsync(id);
+            var role = await _roleManager.FindByIdAsync(id);
             if (role == null)
             {
                 return NotFound(new { error = "Role not found" });
@@ -41,10 +49,10 @@ namespace API.Controllers.Users
                 Description = roleDTO.Description
             };
 
-            var role = await roleManager.FindByNameAsync(newRole.Name);
+            var role = await _roleManager.FindByNameAsync(newRole.Name);
             if (role is not null) return BadRequest(new { Message = "Role Already Exists" });
 
-            var addRole = await roleManager.CreateAsync(newRole);
+            var addRole = await _roleManager.CreateAsync(newRole);
             if (!addRole.Succeeded)
             {
                 var errors = string.Join(", ", addRole.Errors.Select(e => e.Description));
@@ -65,13 +73,17 @@ namespace API.Controllers.Users
         [SwaggerOperation(Summary = "update a single role", Description = "")]
         public async Task<IActionResult> UpdateRole(string id, RoleDTO roleDTO)
         {
-            var findRole = await roleManager.FindByIdAsync(id);
+            var findRole = await _roleManager.FindByIdAsync(id);
             if (findRole is null) return BadRequest(new { Message = "Role Not Found" });
-
+            var findup=_dataContext.AspNetRoles.Where(x=>x.Name == roleDTO.Name).FirstOrDefault();
+            if(findup.Id !=id && findup != null)
+            {
+                return BadRequest(new { Message = "Role Already Exists" });
+            }
             findRole.Name = roleDTO.Name;
             findRole.Description = roleDTO.Description;
 
-            var updateRole = await roleManager.UpdateAsync(findRole);
+            var updateRole = await _roleManager.UpdateAsync(findRole);
             if (!updateRole.Succeeded)
             {
                 var errors = string.Join(", ", updateRole.Errors.Select(e => e.Description).Distinct());
@@ -84,9 +96,9 @@ namespace API.Controllers.Users
         [SwaggerOperation(Summary = "delete a signle role from db", Description = "")]
         public async Task<IActionResult> DeleteRole(string id)
         {
-            var findrole = await roleManager.FindByIdAsync(id);
+            var findrole = await _roleManager.FindByIdAsync(id);
             if (findrole is null) return NotFound(new { error = "Role not found" });
-            var deleteRole= await roleManager.DeleteAsync(findrole);
+            var deleteRole= await _roleManager.DeleteAsync(findrole);
             if (deleteRole.Succeeded)
             {
                 return Ok(new { result = $"Role deleted successfully" });

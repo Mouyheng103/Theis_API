@@ -14,17 +14,17 @@ namespace API.Data
         public DbSet<Position> tblO_Position { get; set; }
         
 
-        //Location
-        public DbSet<Province> tblOL_Provinces { get; set; }
-        public DbSet<District> tblOL_Districts { get; set; }
-        public DbSet<Commune> tblOL_Communes { get; set; }
-        public DbSet<Village> tblOL_Villages { get; set; }
-
         //Staff
         public DbSet<Staffs> tblO_Staff { get; set; }
+        public DbSet<Payroll> tblO_Staff_Payroll { get; set; }
+        public DbSet<Salary> tblO_Staff_Salary { get; set; }
+        public DbSet<SalaryChange> tblO_Staff_SalaryChange { get; set; }
 
         //Miller
         public DbSet<Millers> tblO_Miller {  get; set; }
+        public DbSet<RicePurchase> tblS_RicePurchase {  get; set; }
+        public DbSet<RicePurchasePayment> tblS_RicePurchase_Payment {  get; set; }
+        public DbSet<PaymentComponent> tblS_PaymentComponent {  get; set; }
 
         //Agent
         public DbSet<Agents> tblO_Agent { get; set; }
@@ -36,7 +36,9 @@ namespace API.Data
 
         //User
         public DbSet<Users> AspNetUsers { get; set; }
+        public DbSet<Roles> AspNetRoles { get; set; }
         public DbSet<ViewAuth_UserRole> ViewAuth_UserRole { get; set; }
+        public DbSet<ViewO_Users> ViewO_Users { get; set; }
 
         //View
 
@@ -44,11 +46,12 @@ namespace API.Data
         public DataContext(DbContextOptions<DataContext> options)
             : base(options)
         {
+
         }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            // Ensure there are no configurations for PhoneNumber and PhoneNumberConfirmed
+
             builder.Entity<Users>().Ignore(u => u.PhoneNumber);
             builder.Entity<Users>().Ignore(u => u.PhoneNumberConfirmed);
         }

@@ -1,4 +1,5 @@
 ﻿using API.Data;
+using API.Data.View;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -9,6 +10,7 @@ namespace API.Controllers.Core
 {
     [Route("api/core/branch")]
     [ApiController]
+    [AllowAnonymous]
     public class BranchController : ControllerBase
     {
        
@@ -31,7 +33,25 @@ namespace API.Controllers.Core
         {
             try
             {
-                var data =await _dataContext.tblO_Branch.ToListAsync();
+                var data = from branch in _dataContext.tblO_Branch
+                           join address in _dataContext.ViewO_Address on branch.VillageCode equals address.VillageCode
+                           join manager in _dataContext.tblO_Staff on branch.BranchMangerId equals manager.Id
+                           select new
+                           {
+                               Id = branch.Id,
+                               Name = branch.Name,
+                               Email = branch.Email,
+                               Password = branch.Password,
+                               PhoneNumber = branch.PhoneNumber,
+                               InternetNumber = branch.InternetNumber,
+                               Location = branch.Location,
+                               Created_At = branch.Created_At,
+                               Created_by = branch.Created_By,
+                               IsActive = branch.IsActive,
+                               Address = address,
+                               BranchMangerId = manager,
+                           };
+                var dataList = await data.ToListAsync();
                 return data.Any() ? Ok(new { Message = "success!", Data = data }) : NotFound(new { Message = "No branch found." });
             }
             catch (Exception ex)
@@ -45,7 +65,25 @@ namespace API.Controllers.Core
         {
             try
             {
-                var data = await _dataContext.tblO_Branch.Where(b=>b.Id==id).ToListAsync();
+                var data = from branch in _dataContext.tblO_Branch where branch.Id == id
+                           join address in _dataContext.ViewO_Address on branch.VillageCode equals address.VillageCode
+                           join manager in _dataContext.tblO_Staff on branch.BranchMangerId equals manager.Id
+                           select new
+                           {
+                               Id = branch.Id,
+                               Name = branch.Name,
+                               Email = branch.Email,
+                               Password = branch.Password,
+                               PhoneNumber = branch.PhoneNumber,
+                               InternetNumber = branch.InternetNumber,
+                               Location = branch.Location,
+                               Created_At = branch.Created_At,
+                               Created_by = branch.Created_By,
+                               IsActive = branch.IsActive,
+                               Address = address,
+                               BranchMangerId = manager,
+                           };
+                var dataList = await data.ToListAsync();
                 return data.Any() ? Ok(new { Message = "success!", Data = data }) : NotFound(new { Message = "No branch found." });
             }
             catch (Exception ex)
@@ -75,34 +113,34 @@ namespace API.Controllers.Core
                 {
                     Id = getlastid+1,
                     Name = branchDTO.Name,
-                    ProvinceCode = branchDTO.ProvinceCode,
+                    VillageCode = branchDTO.VillageCode,
                     Email = branchDTO.Email,
                     Password = branchDTO.Password,
                     PhoneNumber = branchDTO.PhoneNumber,
                     InternetNumber = branchDTO.InternetNumber,
                     Location = branchDTO.Location,
                     BranchMangerId = branchDTO.BranchMangerId,
-                    Created_at = DateTime.UtcNow,
-                    created_by = branchDTO.created_by, 
+                    Created_At = DateTime.Now,
+                    Created_By = branchDTO.Created_By, 
                     IsActive = true
                 };
                 var addBranch = _dataContext.Add(newBranch);
                 var BM = await _dataContext.tblO_Staff.FindAsync(branchDTO.BranchMangerId);
-                var province = await _dataContext.tblOL_Provinces.FindAsync(branchDTO.ProvinceCode);
+                var address = await _dataContext.ViewO_Address.FindAsync(branchDTO.VillageCode);
                 await _dataContext.SaveChangesAsync();
                 var data = new
                 {
                     Id = newBranch.Id,
                     Name = branchDTO.Name,
-                    ProvinceId = province,
+                    Address = address,
                     Email = branchDTO.Email,
                     Password = branchDTO.Password,
                     PhoneNumber = branchDTO.PhoneNumber,
                     InternetNumber = branchDTO.InternetNumber,
                     Location = branchDTO.Location,
                     BranchMangerId =BM,
-                    Created_at = DateTime.UtcNow,
-                    created_by = branchDTO.created_by,
+                    Created_at = DateTime.Now,
+                    Created_By = branchDTO.Created_By,
                     IsActive = true
                 };
                 return Ok(new { Message = $"Branch {branchDTO.Name} add successfully !", data= data });
@@ -125,32 +163,32 @@ namespace API.Controllers.Core
             {
 
                 findBranchById.Name = branchDTO.Name;
-                findBranchById.ProvinceCode = branchDTO.ProvinceCode;
+                findBranchById.VillageCode = branchDTO.VillageCode;
                 findBranchById.Email = branchDTO.Email;
                 findBranchById.Password = branchDTO.Password;
                 findBranchById.PhoneNumber = branchDTO.PhoneNumber;
                 findBranchById.InternetNumber = branchDTO.InternetNumber;
                 findBranchById.Location = branchDTO.Location;
                 findBranchById.BranchMangerId = branchDTO.BranchMangerId;
-                findBranchById.Created_at = DateTime.UtcNow;
-                findBranchById.created_by = branchDTO.created_by;
+                findBranchById.Created_At = DateTime.Now;
+                findBranchById.Created_By = branchDTO.Created_By;
                 
                 var BM = await _dataContext.tblO_Staff.FindAsync(branchDTO.BranchMangerId);
-                var province = await _dataContext.tblOL_Provinces.FindAsync(branchDTO.ProvinceCode);
+                var address = await _dataContext.ViewO_Address.FindAsync(branchDTO.VillageCode);
                 await _dataContext.SaveChangesAsync();
                 var data = new
                 {
                     Id = id,
                     Name = branchDTO.Name,
-                    ProvinceId = province,
+                    address = address,
                     Email = branchDTO.Email,
                     Password = branchDTO.Password,
                     PhoneNumber = branchDTO.PhoneNumber,
                     InternetNumber = branchDTO.InternetNumber,
                     Location = branchDTO.Location,
                     BranchMangerId = BM,
-                    Created_at = DateTime.UtcNow,
-                    created_by = branchDTO.created_by,
+                    Created_At = DateTime.Now,
+                    Created_By = branchDTO.Created_By,
                     IsActive = true
                 };
                 return Ok(new { Message = $"Branch {branchDTO.Name} updated successfully !", data = data });
