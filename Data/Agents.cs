@@ -60,5 +60,36 @@ namespace API.Data
         public string Branch_Name { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
     }
+    public class Order
+    {
+        [Key]
+        public int Id { get; set; }
+        public string OrderId { get; set; } = string.Empty;
+        public string YearId { get; set; } = string.Empty;
+        public int Section { get; set; }
+        public int Amount { get; set; }
+        public DateTime Date { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+    }
+    public class Provide
+    {
+        [Key]
+        public int Id { get; set; }
+        public string ProvideId { get; set; } =string.Empty;
+        public string OrderId { get; set; } = string.Empty;
+        public int StaffId { get; set; }
+        public string YearId { get; set; } = string.Empty;
+        public int Section { get; set; }
+        public int Amount { get; set; }
+        public DateTime Date { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+    }
 
 }

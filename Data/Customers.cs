@@ -48,4 +48,37 @@ namespace API.Data
         public int BranchId { get; set; }
         public string Branch_Name { get; set; } = string.Empty;
     }
+    public class CollectMoney
+    {
+        [Key]
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public string ProvideId { get; set; } =string.Empty;
+        public string CustomerId { get; set; } = string.Empty;
+        public int StaffId { get; set; }
+        public decimal Recieve { get; set; }
+        public decimal Balance { get; set; }
+        public DateTime Date { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+    }
+    public class CusLoan
+    {
+        [Key]
+        public int Id { get; set; }
+        public string ProvideId { get; set; } = string.Empty;
+        public string CustomerId { get; set; } = string.Empty;
+        public int StaffId { get; set; }
+        public int Amount { get; set; }
+        public decimal Price { get; set; }
+        public decimal Total { get; set; }
+        public DateTime Date { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+    }
+
 }

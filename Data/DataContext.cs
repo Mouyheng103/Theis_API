@@ -26,13 +26,21 @@ namespace API.Data
         public DbSet<RicePurchasePayment> tblS_RicePurchase_Payment {  get; set; }
         public DbSet<PaymentComponent> tblS_PaymentComponent {  get; set; }
 
+        //Miller
+        public DbSet<ShareToBranch> tblS_ShareToBranch { get; set; }
+        public DbSet<TakeRice> tblS_TakeRice { get; set; }
+
         //Agent
         public DbSet<Agents> tblO_Agent { get; set; }
         public DbSet<ViewO_Agents> ViewO_Agents { get; set; }
+        public DbSet<Order> tblP_Order { get; set; }
+        public DbSet<Provide> tblP_Provide { get; set; }
 
         //Customer
         public DbSet<Customers> tblO_Customer { get; set; }
         public DbSet<ViewO_Customer> ViewO_Customers { get; set; }
+        public DbSet<CollectMoney> tblCol_Collect { get; set; }
+        public DbSet<CusLoan> tblP_CusLoan { get; set; }
 
         //User
         public DbSet<Users> AspNetUsers { get; set; }
